@@ -1,7 +1,7 @@
 # NekoBox for Android
 
 [![API](https://img.shields.io/badge/API-21%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=21)
-[![Releases](https://img.shields.io/github/v/release/MatsuriDayo/NekoBoxForAndroid)](https://github.com/MatsuriDayo/NekoBoxForAndroid/releases)
+[![Releases](https://img.shields.io/github/v/release/moneyfly004/myapk)](https://github.com/moneyfly004/myapk/releases)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-orange.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 sing-box / universal proxy toolchain for Android.
@@ -10,9 +10,9 @@ A universal proxy tool for Android using sing-box.
 
 ## Downloads
 
-[![GitHub All Releases](https://img.shields.io/github/downloads/Matsuridayo/NekoBoxForAndroid/total?label=downloads-total&logo=github&style=flat-square)](https://github.com/Matsuridayo/NekoBoxForAndroid/releases)
+[![GitHub All Releases](https://img.shields.io/github/downloads/moneyfly004/myapk/total?label=downloads-total&logo=github&style=flat-square)](https://github.com/moneyfly004/myapk/releases)
 
-[GitHub Releases](https://github.com/Matsuridayo/NekoBoxForAndroid/releases)
+[GitHub Releases](https://github.com/moneyfly004/myapk/releases)
 
 **⚠️ Warning: The Google Play version has been controlled by a third party since May 2024 and is a non-open source version. Please do not download it.**
 
