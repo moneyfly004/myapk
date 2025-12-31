@@ -6,28 +6,25 @@
 
 sing-box / universal proxy toolchain for Android.
 
-一款使用 sing-box 的 Android 通用代理软件.
+A universal proxy tool for Android using sing-box.
 
-## 下载 / Downloads
+## Downloads
 
 [![GitHub All Releases](https://img.shields.io/github/downloads/Matsuridayo/NekoBoxForAndroid/total?label=downloads-total&logo=github&style=flat-square)](https://github.com/Matsuridayo/NekoBoxForAndroid/releases)
 
-[GitHub Releases 下载](https://github.com/Matsuridayo/NekoBoxForAndroid/releases)
+[GitHub Releases](https://github.com/Matsuridayo/NekoBoxForAndroid/releases)
 
-**Google Play 版本自 2024 年 5 月起已被第三方控制，为非开源版本，请不要下载。**
+**⚠️ Warning: The Google Play version has been controlled by a third party since May 2024 and is a non-open source version. Please do not download it.**
 
-**The Google Play version has been controlled by a third party since May 2024 and is a non-open
-source version. Please do not download it.**
-
-## 更新日志 & Telegram 发布频道 / Changelog & Telegram Channel
+## Changelog & Telegram Channel
 
 https://t.me/Matsuridayo
 
-## 项目主页 & 文档 / Homepage & Documents
+## Homepage & Documents
 
 https://matsuridayo.github.io
 
-## 支持的代理协议 / Supported Proxy Protocols
+## Supported Proxy Protocols
 
 * SOCKS (4/4a/5)
 * HTTP(S)
@@ -45,57 +42,126 @@ https://matsuridayo.github.io
 * NaïveProxy (naive-plugin)
 * Mieru (mieru-plugin)
 
-请到[这里](https://matsuridayo.github.io/nb4a-plugin/)下载插件以获得完整的代理支持.
+Please visit [here](https://matsuridayo.github.io/nb4a-plugin/) to download plugins for full proxy supports.
 
-Please visit [here](https://matsuridayo.github.io/nb4a-plugin/) to download plugins for full proxy
-supports.
-
-## 支持的订阅格式 / Supported Subscription Format
-
-* 一些广泛使用的格式 (如 Shadowsocks, ClashMeta 和 v2rayN)
-* sing-box 出站
-
-仅支持解析出站，即节点。分流规则等信息会被忽略。
+## Supported Subscription Format
 
 * Some widely used formats (like Shadowsocks, ClashMeta and v2rayN)
 * sing-box outbound
 
 Only resolving outbound, i.e. nodes, is supported. Information such as diversion rules are ignored.
 
-## 捐助 / Donate
+## Key Modifications
+
+This fork includes the following enhancements:
+
+### User Authentication System
+- **Login/Register/Forgot Password**: Complete user authentication flow with email verification
+- **Token Management**: Secure token storage and automatic refresh
+- **Backend Integration**: Full integration with RESTful API backend
+
+### Subscription Management
+- **Automatic Subscription**: Auto-add and manage user subscriptions
+- **Subscription Info Display**: Show subscription expiration and device limits
+- **Node Management**: Automatic node selection based on latency, with manual selection option
+
+### UI/UX Improvements
+- **Improved Text Sizing**: Better readability on mobile devices
+- **Material Design**: Consistent Material Design 3 theming
+- **Navigation Fixes**: Resolved navigation loops and share intent issues
+
+### Build & CI/CD
+- **GitHub Actions**: Automated release builds on tag push
+- **Auto Release**: Automatic GitHub Releases creation with APK artifacts
+- **Manual Build**: Support for manual workflow dispatch
+
+### Bug Fixes
+- Fixed layout inflation crashes on Android 10
+- Resolved Intent handling issues preventing share dialog
+- Fixed color compatibility issues
+- Improved node selection and click handling
+
+## Building
+
+### Prerequisites
+- Android SDK (API 21+)
+- Android NDK (r25.0.8775105 or compatible)
+- Go 1.25+ (for libcore)
+- Java Development Kit
+
+### Build Steps
+
+1. **Build libcore**:
+   ```bash
+   cd libcore
+   ./build.sh
+   ```
+
+2. **Build APK**:
+   ```bash
+   ./gradlew app:assembleOssRelease
+   ```
+
+For detailed build instructions, refer to the original repository documentation.
+
+## Release Build
+
+### Automatic Release (Recommended)
+Push a tag starting with `v` to trigger automatic build and release:
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+### Manual Release
+1. Go to GitHub Actions
+2. Select "Release Build" workflow
+3. Click "Run workflow"
+4. Enter release tag (e.g., `v1.0.0`)
+
+The workflow will automatically:
+- Build the APK
+- Create a GitHub Release
+- Upload all APK files
+
+### GitHub Token Setup (Optional)
+If you encounter permission issues, you can add a custom token:
+1. Create a Personal Access Token with `repo` permissions
+2. Add it as a repository secret named `RELEASE_TOKEN`
+3. The workflow will use it automatically
+
+## Donate
 
 <details>
 
-如果这个项目对您有帮助, 可以通过捐赠的方式帮助我们维持这个项目.
+If this project is helpful to you, you can help us maintain it through donations.
 
-捐赠满等额 50 USD 可以在「[捐赠榜](https://mtrdnt.pages.dev/donation_list)」显示头像, 如果您未被添加到这里,
-欢迎联系我们补充.
+Donations of 50 USD or more can display your avatar on the [Donation List](https://mtrdnt.pages.dev/donation_list). If you are not added here, please contact us to add it.
 
-Donations of 50 USD or more can display your avatar on
-the [Donation List](https://mtrdnt.pages.dev/donation_list). If you are not added here, please
-contact us to add it.
+**USDT TRC20**
+```
+TRhnA7SXE5Sap5gSG3ijxRmdYFiD4KRhPs
+```
 
-USDT TRC20
-
-`TRhnA7SXE5Sap5gSG3ijxRmdYFiD4KRhPs`
-
-XMR
-
-`49bwESYQjoRL3xmvTcjZKHEKaiGywjLYVQJMUv79bXonGiyDCs8AzE3KiGW2ytTybBCpWJUvov8SjZZEGg66a4e59GXa6k5`
+**XMR**
+```
+49bwESYQjoRL3xmvTcjZKHEKaiGywjLYVQJMUv79bXonGiyDCs8AzE3KiGW2ytTybBCpWJUvov8SjZZEGg66a4e59GXa6k5
+```
 
 </details>
 
 ## Credits
 
-Core:
-
+**Core:**
 - [SagerNet/sing-box](https://github.com/SagerNet/sing-box)
 
-Android GUI:
-
+**Android GUI:**
 - [shadowsocks/shadowsocks-android](https://github.com/shadowsocks/shadowsocks-android)
 - [SagerNet/SagerNet](https://github.com/SagerNet/SagerNet)
 
-Web Dashboard:
-
+**Web Dashboard:**
 - [Yacd-meta](https://github.com/MetaCubeX/Yacd-meta)
+
+## License
+
+GPL-3.0
