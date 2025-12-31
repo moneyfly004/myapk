@@ -30,13 +30,15 @@ GitHub Actions 会自动提供 `GITHUB_TOKEN`，无需额外设置。工作流�
 2. 点击 "Settings" > "Secrets and variables" > "Actions"
 3. 点击 "New repository secret"
 4. 填写：
-   - Name: `GITHUB_TOKEN_CUSTOM`
+   - Name: `RELEASE_TOKEN` ⚠️ **重要：不能以 `GITHUB_` 开头**
    - Secret: 粘贴刚才复制的 token
 5. 点击 "Add secret"
 
 ### 步骤 3: 验证
 
-工作流会自动使用 `GITHUB_TOKEN_CUSTOM`（如果存在），否则使用默认的 `GITHUB_TOKEN`。
+工作流会自动使用 `RELEASE_TOKEN`（如果存在），否则使用默认的 `GITHUB_TOKEN`。
+
+**注意：** GitHub 不允许 secret 名称以 `GITHUB_` 开头，这是保留前缀。
 
 ## 注意事项
 

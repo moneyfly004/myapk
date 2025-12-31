@@ -121,8 +121,9 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         env:
-          # 优先使用自定义的 GITHUB_TOKEN secret，如果没有则使用默认的 GITHUB_TOKEN
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN_CUSTOM || secrets.GITHUB_TOKEN }}
+          # 优先使用自定义的 RELEASE_TOKEN secret，如果没有则使用默认的 GITHUB_TOKEN
+          # 注意：GitHub 不允许 secret 名称以 GITHUB_ 开头
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: Release ${{ steps.tag.outputs.tag }}
