@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginVertical="4dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="1dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <!-- 节点图标/国旗 -->
+        <TextView
+            android:id="@+id/node_flag"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:gravity="center"
+            android:text="🇭🇰"
+            android:textSize="24sp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- 节点名称 -->
+        <TextView
+            android:id="@+id/node_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="8dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="HK-01 (香港)"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toStartOf="@id/node_latency"
+            app:layout_constraintStart_toEndOf="@id/node_flag"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- 延迟显示 -->
+        <TextView
+            android:id="@+id/node_latency"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:text="12ms"
+            android:textColor="?attr/colorPrimary"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toStartOf="@id/node_check"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- 最快标记 -->
+        <TextView
+            android:id="@+id/fastest_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:background="@android:color/holo_orange_light"
+            android:paddingHorizontal="6dp"
+            android:paddingVertical="2dp"
+            android:text="⚡ 最快"
+            android:textColor="#FFFFFF"
+            android:textSize="10sp"
+            android:visibility="gone"
+            app:layout_constraintEnd_toStartOf="@id/node_check"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- 选中标记 -->
+        <ImageView
+            android:id="@+id/node_check"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:contentDescription="已选中"
+            android:src="@android:drawable/checkbox_on_background"
+            android:tint="?attr/colorPrimary"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- 信号强度指示器 -->
+        <LinearLayout
+            android:id="@+id/signal_strength"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="44dp"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/node_name">
+
+            <View
+                android:id="@+id/signal_1"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:layout_marginEnd="2dp"
+                android:background="?attr/colorPrimary" />
+
+            <View
+                android:id="@+id/signal_2"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:layout_marginEnd="2dp"
+                android:background="?attr/colorPrimary" />
+
+            <View
+                android:id="@+id/signal_3"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:layout_marginEnd="2dp"
+                android:background="?attr/colorPrimary" />
+
+            <View
+                android:id="@+id/signal_4"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:layout_marginEnd="2dp"
+                android:background="?android:attr/textColorSecondary" />
+
+            <View
+                android:id="@+id/signal_5"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:background="?android:attr/textColorSecondary" />
+        </LinearLayout>
+
+        <!-- 负载信息 -->
+        <TextView
+            android:id="@+id/node_load"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="负载: 15%"
+            android:textColor="?android:attr/textColorSecondary"
+            android:textSize="12sp"
+            app:layout_constraintStart_toEndOf="@id/signal_strength"
+            app:layout_constraintTop_toBottomOf="@id/node_name" />
+
+        <!-- 测速进度 -->
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/test_progress"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="44dp"
+            android:layout_marginTop="8dp"
+            android:indeterminate="true"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/signal_strength"
+            app:trackThickness="2dp" />
+
+        <!-- 错误标记 -->
+        <TextView
+            android:id="@+id/node_error"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="44dp"
+            android:layout_marginTop="4dp"
+            android:background="@android:color/holo_red_light"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="2dp"
+            android:text="超时"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/signal_strength" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.material.card.MaterialCardView>
+
