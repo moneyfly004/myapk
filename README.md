@@ -152,16 +152,56 @@ TRhnA7SXE5Sap5gSG3ijxRmdYFiD4KRhPs
 
 ## Similar Projects (sing-box based)
 
-Other Android clients using sing-box kernel:
+### Open Source Projects with Simple UI & Big Connect Button
 
-- **SagerNet**: [SagerNet/SagerNet](https://github.com/SagerNet/SagerNet) - Full-featured proxy client with advanced configuration
-- **SFA (Sing-box For Android)**: Android client with clean UI and multi-protocol support
-- **Hiddify App**: [hiddify/hiddify-next](https://github.com/hiddify/hiddify-next) - Cross-platform client supporting Windows, Android, iOS, macOS, Linux
-- **NekoRay**: [MatsuriDayo/nekoray](https://github.com/MatsuriDayo/nekoray) - Desktop client for Windows/Linux (formerly NekoBox for PC)
+**Recommended for easy modification:**
 
-Other platforms:
-- **NekoRay**: Cross-platform desktop client with GUI
-- **Karing**: Multi-platform client supporting Clash and sing-box subscriptions
+1. **Hiddify App** ⭐ (Most Similar)
+   - GitHub: [hiddify/hiddify-next](https://github.com/hiddify/hiddify-next)
+   - **Open Source**: ✅ Yes
+   - **UI**: Simple, clean interface with prominent connect button
+   - **Platforms**: Windows, Android, iOS, macOS, Linux
+   - **Features**: Cross-platform, Clash subscription support, easy to customize
+   - **Best for**: Projects requiring simple UI and easy modification
+
+2. **SagerNet**
+   - GitHub: [SagerNet/SagerNet](https://github.com/SagerNet/SagerNet)
+   - **Open Source**: ✅ Yes
+   - **UI**: Full-featured with advanced configuration options
+   - **Platforms**: Android
+   - **Features**: Comprehensive proxy management, highly customizable
+
+3. **NekoRay** (Desktop)
+   - GitHub: [MatsuriDayo/nekoray](https://github.com/MatsuriDayo/nekoray)
+   - **Open Source**: ✅ Yes
+   - **UI**: User-friendly GUI with simple interface
+   - **Platforms**: Windows, Linux, macOS
+   - **Features**: Cross-platform desktop client (formerly NekoBox for PC)
+
+### Other Open Source Projects
+
+4. **SFA (Sing-box For Android)**
+   - **Open Source**: ✅ Yes
+   - **UI**: Clean UI with multi-protocol support
+   - **Platforms**: Android
+
+5. **Karing**
+   - **Open Source**: ✅ Yes (check repository)
+   - **UI**: Simple interface
+   - **Platforms**: Windows, Android, iOS, macOS
+   - **Features**: Supports Clash and sing-box subscriptions
+
+### Comparison
+
+| Project | Open Source | Simple UI | Big Connect Button | Easy to Modify | Android Support |
+|---------|------------|-----------|-------------------|----------------|-----------------|
+| **Hiddify App** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **SagerNet** | ✅ | ⚠️ | ⚠️ | ✅ | ✅ |
+| **NekoRay** | ✅ | ✅ | ✅ | ✅ | ❌ (Desktop) |
+| **Karing** | ✅ | ✅ | ✅ | ⚠️ | ✅ |
+| **SFA** | ✅ | ✅ | ⚠️ | ✅ | ✅ |
+
+**Note**: Hiddify App is the most similar to your requirements with its simple UI, prominent connect button, and easy modification capabilities.
 
 ## Credits
 
