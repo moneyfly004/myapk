@@ -150,6 +150,19 @@ TRhnA7SXE5Sap5gSG3ijxRmdYFiD4KRhPs
 
 </details>
 
+## Similar Projects (sing-box based)
+
+Other Android clients using sing-box kernel:
+
+- **SagerNet**: [SagerNet/SagerNet](https://github.com/SagerNet/SagerNet) - Full-featured proxy client with advanced configuration
+- **SFA (Sing-box For Android)**: Android client with clean UI and multi-protocol support
+- **Hiddify App**: [hiddify/hiddify-next](https://github.com/hiddify/hiddify-next) - Cross-platform client supporting Windows, Android, iOS, macOS, Linux
+- **NekoRay**: [MatsuriDayo/nekoray](https://github.com/MatsuriDayo/nekoray) - Desktop client for Windows/Linux (formerly NekoBox for PC)
+
+Other platforms:
+- **NekoRay**: Cross-platform desktop client with GUI
+- **Karing**: Multi-platform client supporting Clash and sing-box subscriptions
+
 ## Credits
 
 **Core:**
