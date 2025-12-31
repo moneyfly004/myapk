@@ -180,28 +180,58 @@ TRhnA7SXE5Sap5gSG3ijxRmdYFiD4KRhPs
 
 ### Other Open Source Projects
 
-4. **SFA (Sing-box For Android)**
+4. **Karing / KaringX** ⭐ (Highly Recommended)
+   - **Open Source**: ✅ Yes
+   - **UI**: Simple, clean interface with prominent connect button
+   - **Platforms**: Windows, macOS, Android, iOS, Apple TV
+   - **Features**: Compatible with Clash and sing-box, supports multiple protocols (Shadowsocks, VMess, Trojan, Hysteria, etc.)
+   - **Best for**: Cross-platform projects with simple UI requirements
+   - **Note**: Flutter-based, easy to modify and customize
+
+5. **OneBox** ⭐ (Highly Recommended)
+   - **Open Source**: ✅ Yes
+   - **UI**: Minimalist design with "simplicity first" philosophy
+   - **Platforms**: Windows, macOS, Ubuntu
+   - **Features**: Focus on core functionality, instant usability, reduced learning curve
+   - **Best for**: Desktop projects requiring minimal UI
+
+6. **SFA (Sing-box For Android)**
    - **Open Source**: ✅ Yes
    - **UI**: Clean UI with multi-protocol support
    - **Platforms**: Android
+   - **Features**: Multi-protocol support, lightweight
 
-5. **Karing**
+7. **GUI for SingBox** (Windows)
    - **Open Source**: ✅ Yes (check repository)
-   - **UI**: Simple interface
-   - **Platforms**: Windows, Android, iOS, macOS
-   - **Features**: Supports Clash and sing-box subscriptions
+   - **UI**: Simple graphical interface
+   - **Platforms**: Windows
+   - **Features**: Supports most proxy protocols (Shadowsocks, VMess, VLESS, Reality, Trojan, Hysteria2, etc.)
 
-### Comparison
+### Comparison Table
 
-| Project | Open Source | Simple UI | Big Connect Button | Easy to Modify | Android Support |
-|---------|------------|-----------|-------------------|----------------|-----------------|
-| **Hiddify App** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **SagerNet** | ✅ | ⚠️ | ⚠️ | ✅ | ✅ |
-| **NekoRay** | ✅ | ✅ | ✅ | ✅ | ❌ (Desktop) |
-| **Karing** | ✅ | ✅ | ✅ | ⚠️ | ✅ |
-| **SFA** | ✅ | ✅ | ⚠️ | ✅ | ✅ |
+| Project | Open Source | Simple UI | Big Connect Button | Easy to Modify | Android Support | Cross-Platform | Language/Framework |
+|---------|------------|-----------|-------------------|----------------|-----------------|----------------|-------------------|
+| **Hiddify App** ⭐ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (All) | Flutter + Go |
+| **Karing/KaringX** ⭐ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (All) | Flutter |
+| **OneBox** ⭐ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ (Desktop) | - |
+| **NekoRay** | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ (Desktop) | Qt/C++ |
+| **SagerNet** | ✅ | ⚠️ | ⚠️ | ✅ | ✅ | ❌ | Kotlin/Java |
+| **SFA** | ✅ | ✅ | ⚠️ | ✅ | ✅ | ❌ | Kotlin/Java |
+| **GUI for SingBox** | ✅ | ✅ | ✅ | ⚠️ | ❌ | ❌ (Windows) | - |
 
-**Note**: Hiddify App is the most similar to your requirements with its simple UI, prominent connect button, and easy modification capabilities.
+### GitHub Repository Links
+
+**Verified Open Source Repositories:**
+
+1. **Hiddify App**: [hiddify/hiddify-next](https://github.com/hiddify/hiddify-next)
+2. **SagerNet**: [SagerNet/SagerNet](https://github.com/SagerNet/SagerNet)
+3. **NekoRay**: [MatsuriDayo/nekoray](https://github.com/MatsuriDayo/nekoray)
+4. **sing-box Core**: [SagerNet/sing-box](https://github.com/SagerNet/sing-box)
+
+**Note**: 
+- **Hiddify App** and **Karing/KaringX** are the most similar to your requirements with simple UI, prominent connect button, and easy modification capabilities (both Flutter-based).
+- **OneBox** is excellent for desktop projects with minimalist design philosophy.
+- For Android-specific projects, **Hiddify App** and **Karing** are the best choices.
 
 ## Credits
 
