@@ -1,16 +1,21 @@
 name: Release Build
 on:
+  # 手动触发构建
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release Tag"
+        description: "Release Tag (例如: v1.0.0)"
         required: true
       publish:
-        description: "Publish: If want ignore"
+        description: "Publish: 输入 'y' 跳过发布"
         required: false
       play:
-        description: "Play: If want ignore"
+        description: "Play: 输入 'y' 跳过 Play Bundle 构建"
         required: false
+  # 推送 tag 时自动构建和发布
+  push:
+    tags:
+      - 'v*'
 jobs:
   libcore:
     name: Native Build (LibCore)
@@ -78,28 +83,55 @@ jobs:
           path: ${{ env.APK }}
   publish:
     name: Publish Release
-    if: github.event.inputs.publish != 'y'
+    # 手动触发时，如果 publish 输入为 'y' 则跳过；push tag 时总是发布
+    if: |
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.publish != 'y') ||
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
     needs: build
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Donwload Artifacts
+        with:
+          fetch-depth: 0
+      - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
           name: APKs
           path: artifacts
-      - name: Release
+      - name: Determine Release Tag
+        id: tag
         run: |
-          wget -O ghr.tar.gz https://github.com/tcnksm/ghr/releases/download/v0.13.0/ghr_v0.13.0_linux_amd64.tar.gz
-          tar -xvf ghr.tar.gz
-          mv ghr*linux_amd64/ghr .
-          mkdir apks
-          find artifacts -name "*.apk" -exec cp {} apks \;
-          ./ghr -delete -t "${{ github.token }}" -n "${{ github.event.inputs.tag }}" "${{ github.event.inputs.tag }}" apks
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: Release ${{ steps.tag.outputs.tag }}
+          body: |
+            ## Release ${{ steps.tag.outputs.tag }}
+            
+            ### APK 文件
+            - 自动构建的 Release 版本 APK
+            - 包含所有架构版本
+            
+            ### 安装说明
+            1. 下载对应架构的 APK 文件
+            2. 在 Android 设备上安装
+          files: artifacts/**/*.apk
+          draft: false
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
   play:
     name: Build Play Bundle
-    if: github.event.inputs.play != 'y'
+    # 手动触发时，如果 play 输入为 'y' 则跳过；push tag 时总是构建
+    if: |
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.play != 'y') ||
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
     needs:
       - libcore
