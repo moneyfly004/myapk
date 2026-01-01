@@ -32,6 +32,7 @@ import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.GroupManager
 import io.nekohasekai.sagernet.database.ProfileManager
 import io.nekohasekai.sagernet.database.ProxyGroup
+import io.nekohasekai.sagernet.database.SagerDatabase
 import io.nekohasekai.sagernet.database.SubscriptionBean
 import io.nekohasekai.sagernet.database.preference.OnPreferenceDataStoreChangeListener
 import io.nekohasekai.sagernet.databinding.LayoutMainBinding
@@ -46,6 +47,7 @@ import io.nekohasekai.sagernet.ktx.isPreview
 import io.nekohasekai.sagernet.ktx.launchCustomTab
 import io.nekohasekai.sagernet.ktx.onMainDispatcher
 import io.nekohasekai.sagernet.ktx.parseProxies
+import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.readableMessage
 import io.nekohasekai.sagernet.ktx.runOnDefaultDispatcher
 import moe.matsuri.nb4a.utils.Util
@@ -233,8 +235,45 @@ class MainActivity : ThemedActivity(),
     }
 
     private suspend fun finishImportSubscription(subscription: ProxyGroup) {
-        GroupManager.createGroup(subscription)
-        GroupUpdater.startUpdate(subscription, true)
+        val subscriptionUrl = subscription.subscription?.link
+        if (subscriptionUrl.isNullOrEmpty()) {
+            GroupManager.createGroup(subscription)
+            GroupUpdater.startUpdate(subscription, true)
+            return
+        }
+        
+        val baseUrl = getBaseSubscriptionUrl(subscriptionUrl)
+        
+        // 获取所有订阅组
+        val allSubscriptionGroups = SagerDatabase.groupDao.allGroups()
+            .filter { it.type == GroupType.SUBSCRIPTION }
+        
+        // 查找是否有相同基础URL的订阅
+        val existingGroup = allSubscriptionGroups.find { group ->
+            group.subscription?.link?.let { getBaseSubscriptionUrl(it) == baseUrl } ?: false
+        }
+        
+        if (existingGroup != null) {
+            // 如果已存在相同基础URL的订阅，更新它的链接并更新
+            existingGroup.subscription?.link = subscriptionUrl
+            existingGroup.name = subscription.name ?: existingGroup.name
+            GroupManager.updateGroup(existingGroup)
+            GroupUpdater.startUpdate(existingGroup, true)
+            
+            // 删除其他订阅组（保留当前这一个）
+            val otherGroups = allSubscriptionGroups.filter { it.id != existingGroup.id }
+            otherGroups.forEach { group ->
+                GroupManager.deleteGroup(group.id)
+            }
+        } else {
+            // 如果不存在，删除所有旧订阅，添加新订阅
+            allSubscriptionGroups.forEach { group ->
+                GroupManager.deleteGroup(group.id)
+            }
+            
+            GroupManager.createGroup(subscription)
+            GroupUpdater.startUpdate(subscription, true)
+        }
     }
 
     suspend fun importProfile(uri: Uri) {
@@ -339,18 +378,51 @@ class MainActivity : ThemedActivity(),
 
     @SuppressLint("CommitTransaction")
     fun displayFragment(fragment: ToolbarFragment) {
-        if (fragment is ConfigurationFragment) {
-            binding.stats.allowShow = true
-            binding.fab.show()
-        } else if (!DataStore.showBottomBar) {
-            binding.stats.allowShow = false
-            binding.stats.performHide()
-            binding.fab.hide()
+        try {
+            // 先检查当前 Fragment，如果是同一个类型，不替换
+            val currentFragment = supportFragmentManager.findFragmentById(R.id.fragment_holder)
+            if (currentFragment != null && currentFragment::class.java == fragment::class.java) {
+                binding.drawerLayout.closeDrawers()
+                return
+            }
+            
+            if (fragment is ConfigurationFragment) {
+                binding.stats.allowShow = true
+                binding.fab.show()
+            } else if (!DataStore.showBottomBar) {
+                binding.stats.allowShow = false
+                binding.stats.performHide()
+                binding.fab.hide()
+            }
+            
+            // 使用 replace 方法，这会自动处理 Fragment 的生命周期
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.fragment_holder, fragment)
+                .commitAllowingStateLoss()
+            binding.drawerLayout.closeDrawers()
+        } catch (e: Exception) {
+            Logs.e(e)
+            // 如果出错，尝试使用 commit 而不是 commitAllowingStateLoss
+            try {
+                supportFragmentManager.beginTransaction()
+                    .replace(R.id.fragment_holder, fragment)
+                    .commit()
+                binding.drawerLayout.closeDrawers()
+            } catch (e2: Exception) {
+                Logs.e(e2)
+                // 最后的备用方案：延迟执行
+                binding.root.post {
+                    try {
+                        supportFragmentManager.beginTransaction()
+                            .replace(R.id.fragment_holder, fragment)
+                            .commitAllowingStateLoss()
+                        binding.drawerLayout.closeDrawers()
+                    } catch (e3: Exception) {
+                        Logs.e(e3)
+                    }
+                }
+            }
         }
-        supportFragmentManager.beginTransaction()
-            .replace(R.id.fragment_holder, fragment)
-            .commitAllowingStateLoss()
-        binding.drawerLayout.closeDrawers()
     }
 
     fun displayFragmentWithId(@IdRes id: Int): Boolean {
@@ -488,12 +560,77 @@ class MainActivity : ThemedActivity(),
         connection.updateConnectionId(SagerConnection.CONNECTION_ID_MAIN_ACTIVITY_FOREGROUND)
         super.onStart()
     }
+    
+    override fun onResume() {
+        super.onResume()
+        // 每次打开软件时自动更新订阅
+        if (authRepository.isAuthenticated()) {
+            updateSubscriptionOnResume()
+        }
+    }
+    
+    /**
+     * 在 onResume 时更新订阅
+     */
+    private fun updateSubscriptionOnResume() {
+        val prefs = getSharedPreferences("subscription_prefs", MODE_PRIVATE)
+        val hasSubscription = prefs.getBoolean("has_subscription", false)
+        
+        if (hasSubscription) {
+            lifecycleScope.launch {
+                try {
+                    runOnDefaultDispatcher {
+                        // 获取所有订阅组并更新
+                        val subscriptionGroups = SagerDatabase.groupDao.allGroups()
+                            .filter { it.type == GroupType.SUBSCRIPTION }
+                        
+                        subscriptionGroups.forEach { group ->
+                            if (group.subscription != null && !group.subscription!!.link.isNullOrEmpty()) {
+                                GroupUpdater.startUpdate(group, false) // false 表示不显示通知
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    Logs.w(e)
+                }
+            }
+        }
+    }
 
     override fun onStop() {
         connection.updateConnectionId(SagerConnection.CONNECTION_ID_MAIN_ACTIVITY_BACKGROUND)
         super.onStop()
     }
 
+    /**
+     * 提取订阅URL的基础部分（去掉时间戳等参数）
+     */
+    private fun getBaseSubscriptionUrl(url: String): String {
+        return try {
+            val uri = Uri.parse(url)
+            val scheme = uri.scheme ?: ""
+            val authority = uri.authority ?: ""
+            val path = uri.path ?: ""
+            val baseUrl = "$scheme://$authority$path"
+            // 如果有查询参数，只保留非时间戳参数
+            val queryParams = uri.queryParameterNames
+                .filter { it != "t" && it != "timestamp" && it != "time" }
+                .mapNotNull { paramName ->
+                    uri.getQueryParameter(paramName)?.let { "$paramName=$it" }
+                }
+            if (queryParams.isNotEmpty()) {
+                "$baseUrl?${queryParams.joinToString("&")}"
+            } else {
+                baseUrl
+            }
+        } catch (e: Exception) {
+            // 如果解析失败，尝试简单处理：去掉 ?t= 或 &t= 后面的部分
+            url.split("?").firstOrNull()?.split("&t=")?.firstOrNull() 
+                ?: url.split("&t=").firstOrNull() 
+                ?: url
+        }
+    }
+    
     /**
      * 检查并自动添加订阅
      */
@@ -506,37 +643,58 @@ class MainActivity : ThemedActivity(),
             lifecycleScope.launch {
                 try {
                     runOnDefaultDispatcher {
-                        // 自动添加订阅
-                        val expireTime = prefs.getString("expire_time", "未设置")
-                        val groupName = if (expireTime != "未设置") {
-                            "到期: $expireTime"
-                        } else {
-                            "我的订阅"
+                        val baseUrl = getBaseSubscriptionUrl(subscriptionUrl)
+                        
+                        // 获取所有订阅组
+                        val allSubscriptionGroups = SagerDatabase.groupDao.allGroups()
+                            .filter { it.type == GroupType.SUBSCRIPTION }
+                        
+                        // 查找是否有相同基础URL的订阅
+                        val existingGroup = allSubscriptionGroups.find { group ->
+                            group.subscription?.link?.let { getBaseSubscriptionUrl(it) == baseUrl } ?: false
                         }
                         
-                        val proxyGroup = ProxyGroup().apply {
-                            name = groupName
-                            type = GroupType.SUBSCRIPTION
-                            subscription = SubscriptionBean().apply {
-                                link = subscriptionUrl
+                        if (existingGroup != null) {
+                            // 如果已存在相同基础URL的订阅，更新它的链接并更新
+                            existingGroup.subscription?.link = subscriptionUrl
+                            GroupManager.updateGroup(existingGroup)
+                            GroupUpdater.startUpdate(existingGroup, true)
+                            
+                            // 删除其他订阅组（保留当前这一个）
+                            val otherGroups = allSubscriptionGroups.filter { it.id != existingGroup.id }
+                            otherGroups.forEach { group ->
+                                GroupManager.deleteGroup(group.id)
                             }
+                        } else {
+                            // 如果不存在，删除所有旧订阅，添加新订阅
+                            allSubscriptionGroups.forEach { group ->
+                                GroupManager.deleteGroup(group.id)
+                            }
+                            
+                            // 创建新订阅组
+                            val proxyGroup = ProxyGroup().apply {
+                                name = "我的订阅"
+                                type = GroupType.SUBSCRIPTION
+                                subscription = SubscriptionBean().apply {
+                                    link = subscriptionUrl
+                                }
+                            }
+                            
+                            val groupId = GroupManager.createGroup(proxyGroup)
+                            // 更新订阅
+                            GroupUpdater.startUpdate(proxyGroup, true)
                         }
-                        
-                        val groupId = GroupManager.createGroup(proxyGroup)
-                        
-                        // 更新订阅
-                        GroupUpdater.startUpdate(proxyGroup, true)
                         
                         onMainDispatcher {
                             Snackbar.make(
                                 binding.root,
-                                "订阅已自动添加: $groupName",
+                                "订阅已自动添加",
                                 Snackbar.LENGTH_LONG
                             ).show()
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Logs.e(e)
                 }
             }
         }

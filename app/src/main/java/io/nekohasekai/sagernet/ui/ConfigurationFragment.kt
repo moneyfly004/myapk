@@ -95,6 +95,7 @@ import io.nekohasekai.sagernet.widget.UndoSnackbarManager
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -102,6 +103,16 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import moe.matsuri.nb4a.Protocols
 import moe.matsuri.nb4a.Protocols.getProtocolColor
+import io.nekohasekai.sagernet.auth.AuthRepository
+import io.nekohasekai.sagernet.auth.UserSubscription
+import android.widget.ProgressBar
+import android.widget.RadioButton
+import android.widget.RadioGroup
+import android.widget.Button
+import androidx.lifecycle.lifecycleScope
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import moe.matsuri.nb4a.proxy.anytls.AnyTLSSettingsActivity
 import moe.matsuri.nb4a.proxy.config.ConfigSettingActivity
 import moe.matsuri.nb4a.proxy.shadowtls.ShadowTLSSettingsActivity
@@ -132,6 +143,28 @@ class ConfigurationFragment @JvmOverloads constructor(
     lateinit var groupPager: ViewPager2
 
     val alwaysShowAddress by lazy { DataStore.alwaysShowAddress }
+    
+    // 新的 UI 元素
+    private lateinit var userInfoCard: View
+    private lateinit var expireTimeText: TextView
+    private lateinit var expireProgress: ProgressBar
+    private lateinit var remainingDaysText: TextView
+    private lateinit var deviceLimitText: TextView
+    private lateinit var onlineDevicesText: TextView
+    private lateinit var connectButton: Button
+    private lateinit var routingModeGroup: RadioGroup
+    private lateinit var rulesMode: RadioButton
+    private lateinit var globalMode: RadioButton
+    private lateinit var routingModeHint: TextView
+    private lateinit var nodeSelectorHeader: View
+    private lateinit var selectedNodeText: TextView
+    private lateinit var nodeSelectorArrow: ImageView
+    private lateinit var nodeListRecycler: RecyclerView
+    private lateinit var nodeListAdapter: NodeListAdapter
+    
+    private lateinit var authRepository: AuthRepository
+    private var isNodeListExpanded = false
+    private var autoSelectEnabled = true // 默认启用自动选择模式
 
     fun getCurrentGroupFragment(): GroupFragment? {
         return try {
@@ -164,11 +197,15 @@ class ConfigurationFragment @JvmOverloads constructor(
         super.onCreate(savedInstanceState)
 
         if (savedInstanceState != null) {
-            parentFragmentManager.beginTransaction()
-                .setReorderingAllowed(false)
-                .detach(this)
-                .attach(this)
-                .commit()
+            try {
+                parentFragmentManager.beginTransaction()
+                    .setReorderingAllowed(false)
+                    .detach(this)
+                    .attach(this)
+                    .commitAllowingStateLoss()
+            } catch (e: Exception) {
+                Logs.w(e)
+            }
         }
     }
 
@@ -241,6 +278,439 @@ class ConfigurationFragment @JvmOverloads constructor(
         }
 
         DataStore.profileCacheStore.registerChangeListener(this)
+        
+        // 初始化新的 UI 元素
+        initNewUIElements(view)
+        
+        // 加载用户订阅信息
+        loadUserSubscriptionInfo()
+        
+        // 设置连接按钮
+        setupConnectButton()
+        
+        // 设置路由模式选择器
+        setupRoutingModeSelector()
+        
+        // 设置节点选择器
+        setupNodeSelector()
+        
+        // 登录后自动运行 URL test 和排序
+        if (authRepository.isAuthenticated()) {
+            lifecycleScope.launch {
+                delay(2000) // 延迟2秒后运行，等待订阅加载完成
+                autoUrlTest()
+            }
+        }
+    }
+    
+    private fun initNewUIElements(view: View) {
+        authRepository = AuthRepository(requireContext())
+        
+        userInfoCard = view.findViewById(R.id.user_info_card)
+        expireTimeText = view.findViewById(R.id.expire_time_text)
+        expireProgress = view.findViewById(R.id.expire_progress)
+        remainingDaysText = view.findViewById(R.id.remaining_days_text)
+        deviceLimitText = view.findViewById(R.id.device_limit_text)
+        onlineDevicesText = view.findViewById(R.id.online_devices_text)
+        connectButton = view.findViewById(R.id.connect_button)
+        routingModeGroup = view.findViewById(R.id.routing_mode_group)
+        rulesMode = view.findViewById(R.id.rules_mode)
+        globalMode = view.findViewById(R.id.global_mode)
+        routingModeHint = view.findViewById(R.id.routing_mode_hint)
+        nodeSelectorHeader = view.findViewById(R.id.node_selector_header)
+        selectedNodeText = view.findViewById(R.id.selected_node_text)
+        nodeSelectorArrow = view.findViewById(R.id.node_selector_arrow)
+        nodeListRecycler = view.findViewById(R.id.node_list_recycler)
+        
+        // 初始化节点列表适配器
+        nodeListAdapter = NodeListAdapter()
+        nodeListRecycler.layoutManager = LinearLayoutManager(requireContext())
+        nodeListRecycler.adapter = nodeListAdapter
+        
+        // 根据当前路由模式设置选中状态
+        val currentBypassMode = DataStore.bypass
+        if (currentBypassMode) {
+            rulesMode.isChecked = true
+            routingModeHint.text = "规则模式：规则内不翻墙，规则外翻墙"
+        } else {
+            globalMode.isChecked = true
+            routingModeHint.text = "全局模式：所有网站应用都翻墙"
+        }
+    }
+    
+    private fun loadUserSubscriptionInfo() {
+        if (!authRepository.isAuthenticated()) {
+            userInfoCard.isGone = true
+            return
+        }
+        
+        lifecycleScope.launch {
+            val result = authRepository.getUserSubscription()
+            result.onSuccess { subscription ->
+                onMainDispatcher {
+                    updateUserInfoCard(subscription)
+                }
+            }.onFailure {
+                Logs.w(it)
+            }
+        }
+    }
+    
+    private fun updateUserInfoCard(subscription: UserSubscription) {
+        expireTimeText.text = "到期时间：${subscription.expireTime}"
+        
+        // 计算剩余天数
+        try {
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val expireDate = dateFormat.parse(subscription.expireTime)
+            if (expireDate != null) {
+                val now = Date()
+                val diff = expireDate.time - now.time
+                val days = (diff / (1000 * 60 * 60 * 24)).toInt()
+                
+                if (days > 0) {
+                    remainingDaysText.text = "剩余天数：$days"
+                    // 假设订阅期为30天，计算进度
+                    val progress = (days * 100 / 30).coerceIn(0, 100)
+                    expireProgress.progress = progress
+                } else {
+                    remainingDaysText.text = "已过期"
+                    expireProgress.progress = 0
+                }
+            }
+        } catch (e: Exception) {
+            Logs.w(e)
+        }
+        
+        deviceLimitText.text = "设备数：${subscription.currentDevices}/${subscription.deviceLimit}"
+        onlineDevicesText.text = "在线：${subscription.currentDevices}"
+    }
+    
+    private fun setupConnectButton() {
+        connectButton.setOnClickListener {
+            if (DataStore.serviceState.canStop) {
+                SagerNet.stopService()
+            } else {
+                // 确保有选中的节点
+                runOnDefaultDispatcher {
+                    var selectedProxy = DataStore.selectedProxy
+                    
+                    // 如果使用自动选择模式，选择最优节点
+                    if (autoSelectEnabled || selectedProxy <= 0) {
+                        val bestNode = getBestNode()
+                        if (bestNode != null) {
+                            selectedProxy = bestNode.id
+                            DataStore.selectedProxy = selectedProxy
+                        }
+                    }
+                    
+                    // 检查是否有选中的节点
+                    if (selectedProxy > 0) {
+                        val profile = SagerDatabase.proxyDao.getById(selectedProxy)
+                        if (profile != null) {
+                            onMainDispatcher {
+                                // 直接调用 MainActivity 的 FAB 按钮点击，和下方连接功能一模一样
+                                val mainActivity = requireActivity() as MainActivity
+                                mainActivity.binding.fab.performClick()
+                            }
+                        } else {
+                            onMainDispatcher {
+                                snackbar("选中的节点不存在").show()
+                            }
+                        }
+                    } else {
+                        onMainDispatcher {
+                            snackbar("请先选择节点").show()
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 更新按钮状态
+        updateConnectButtonState()
+    }
+    
+    private fun updateConnectButtonState() {
+        val isConnected = DataStore.serviceState.canStop
+        connectButton.text = if (isConnected) "断开" else "连接"
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        updateConnectButtonState()
+        updateSelectedNodeText()
+    }
+    
+    private fun setupRoutingModeSelector() {
+        routingModeGroup.setOnCheckedChangeListener { _, checkedId ->
+            val isRulesMode = checkedId == R.id.rules_mode
+            DataStore.bypass = isRulesMode
+            
+            if (isRulesMode) {
+                routingModeHint.text = "规则模式：规则内不翻墙，规则外翻墙"
+            } else {
+                routingModeHint.text = "全局模式：所有网站应用都翻墙"
+            }
+            
+            // 如果已连接，需要重新加载服务
+            if (DataStore.serviceState.canStop) {
+                snackbar(getString(R.string.need_reload)).setAction(R.string.apply) {
+                    SagerNet.reloadService()
+                }.show()
+            }
+        }
+    }
+    
+    private fun setupNodeSelector() {
+        nodeSelectorHeader.setOnClickListener {
+            isNodeListExpanded = !isNodeListExpanded
+            nodeListRecycler.isVisible = isNodeListExpanded
+            nodeSelectorArrow.rotation = if (isNodeListExpanded) 180f else 0f
+            
+            if (isNodeListExpanded) {
+                loadNodeList()
+                // 展开节点列表时，自动开启测速和排序
+                lifecycleScope.launch {
+                    autoUrlTest()
+                }
+            }
+        }
+        
+        // 初始化时加载节点列表
+        loadNodeList()
+    }
+    
+    private fun loadNodeList() {
+        runOnDefaultDispatcher {
+            val group = DataStore.currentGroup()
+            val profiles = SagerDatabase.proxyDao.getByGroup(group.id)
+            
+            // 按延迟排序：已测试且可用的节点按延迟排序，未测试的排在后面
+            val sortedProfiles = profiles.sortedWith(compareBy<ProxyEntity> { 
+                when {
+                    it.status == 1 -> 0 // 可用节点优先
+                    it.status == 0 -> 1 // 测试中的节点
+                    else -> 2 // 不可用的节点
+                }
+            }.thenBy { 
+                if (it.status == 1) it.ping else Int.MAX_VALUE 
+            })
+            
+            onMainDispatcher {
+                if (::nodeListAdapter.isInitialized) {
+                    nodeListAdapter.updateNodes(sortedProfiles)
+                }
+                updateSelectedNodeText()
+            }
+        }
+    }
+    
+    private fun updateSelectedNodeText() {
+        if (autoSelectEnabled) {
+            val bestNode = getBestNode()
+            if (bestNode != null) {
+                selectedNodeText.text = "自动选择 (Auto): ${bestNode.displayName()}"
+                // 确保自动选择模式下，选中的是最优节点
+                if (DataStore.selectedProxy != bestNode.id) {
+                    DataStore.selectedProxy = bestNode.id
+                }
+            } else {
+                selectedNodeText.text = "自动选择 (Auto)"
+            }
+        } else {
+            val selected = DataStore.selectedProxy
+            if (selected > 0) {
+                runOnDefaultDispatcher {
+                    val profile = SagerDatabase.proxyDao.getById(selected)
+                    onMainDispatcher {
+                        selectedNodeText.text = profile?.displayName() ?: "未选择"
+                    }
+                }
+            } else {
+                selectedNodeText.text = "未选择"
+            }
+        }
+    }
+    
+    private fun getBestNode(): ProxyEntity? {
+        val group = DataStore.currentGroup()
+        val profiles = SagerDatabase.proxyDao.getByGroup(group.id)
+        
+        // 找到延迟最低的可用节点
+        return profiles.filter { it.status == 1 }
+            .minByOrNull { it.ping }
+    }
+    
+    @OptIn(DelicateCoroutinesApi::class)
+    private suspend fun autoUrlTest() {
+        if (DataStore.runningTest) return
+        DataStore.runningTest = true
+        
+        val group = DataStore.currentGroup()
+        
+        // 设置排序方式为按延迟排序
+        if (group.order != GroupOrder.BY_DELAY) {
+            group.order = GroupOrder.BY_DELAY
+            GroupManager.updateGroup(group)
+        }
+        
+        runOnDefaultDispatcher {
+            val profilesList = SagerDatabase.proxyDao.getByGroup(group.id)
+            if (profilesList.isEmpty()) {
+                DataStore.runningTest = false
+                return@runOnDefaultDispatcher
+            }
+            
+            val profiles = ConcurrentLinkedQueue(profilesList)
+            val testJobs = mutableListOf<Job>()
+            val sortedResults = ConcurrentHashMap<Long, ProxyEntity>()
+            
+            // 使用并发测试，不等待所有节点测试完毕
+            repeat(DataStore.connectionTestConcurrent.coerceAtMost(profilesList.size)) {
+                testJobs.add(launch(Dispatchers.IO) {
+                    val urlTest = UrlTest()
+                    while (isActive) {
+                        val profile = profiles.poll() ?: break
+                        profile.status = 0
+                        
+                        try {
+                            val result = urlTest.doTest(profile)
+                            profile.status = 1
+                            profile.ping = result
+                            ProfileManager.updateProfile(profile)
+                            
+                            // 测试完成后立即更新排序
+                            sortedResults[profile.id] = profile
+                            onMainDispatcher {
+                                // 实时更新节点列表和排序
+                                updateNodeListWithSorting()
+                                // 如果使用自动选择，更新选中的节点
+                                if (autoSelectEnabled) {
+                                    val bestNode = getBestNode()
+                                    if (bestNode != null && DataStore.selectedProxy != bestNode.id) {
+                                        DataStore.selectedProxy = bestNode.id
+                                        updateSelectedNodeText()
+                                    }
+                                }
+                            }
+                        } catch (e: PluginManager.PluginNotFoundException) {
+                            profile.status = 2
+                            profile.error = e.readableMessage
+                            ProfileManager.updateProfile(profile)
+                        } catch (e: Exception) {
+                            profile.status = 3
+                            profile.error = e.readableMessage
+                            ProfileManager.updateProfile(profile)
+                        }
+                    }
+                })
+            }
+            
+            // 等待所有测试完成
+            testJobs.joinAll()
+            
+            // 触发 GroupManager 重新加载以应用排序
+            GroupManager.postReload(group.id)
+            
+            onMainDispatcher {
+                loadNodeList()
+                updateSelectedNodeText()
+                
+                // 如果使用自动选择，确保选择了最优节点
+                if (autoSelectEnabled) {
+                    val bestNode = getBestNode()
+                    if (bestNode != null) {
+                        DataStore.selectedProxy = bestNode.id
+                        updateSelectedNodeText()
+                    }
+                }
+            }
+            
+            DataStore.runningTest = false
+        }
+    }
+    
+    private fun updateNodeListWithSorting() {
+        runOnDefaultDispatcher {
+            val group = DataStore.currentGroup()
+            val profiles = SagerDatabase.proxyDao.getByGroup(group.id)
+            
+            // 按延迟排序
+            val sortedProfiles = profiles.sortedBy { 
+                if (it.status == 1) it.ping else Int.MAX_VALUE 
+            }
+            
+            onMainDispatcher {
+                if (::nodeListAdapter.isInitialized) {
+                    nodeListAdapter.updateNodes(sortedProfiles)
+                }
+            }
+        }
+    }
+    
+    // 节点列表适配器
+    inner class NodeListAdapter : RecyclerView.Adapter<NodeListAdapter.NodeViewHolder>() {
+        private var nodes: List<ProxyEntity> = emptyList()
+        
+        fun updateNodes(newNodes: List<ProxyEntity>) {
+            nodes = newNodes
+            notifyDataSetChanged()
+        }
+        
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NodeViewHolder {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.layout_profile, parent, false)
+            return NodeViewHolder(view)
+        }
+        
+        override fun onBindViewHolder(holder: NodeViewHolder, position: Int) {
+            holder.bind(nodes[position])
+        }
+        
+        override fun getItemCount(): Int = nodes.size
+        
+        inner class NodeViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            private val profileName: TextView = itemView.findViewById(R.id.profile_name)
+            private val profileType: TextView = itemView.findViewById(R.id.profile_type)
+            private val profileStatus: TextView = itemView.findViewById(R.id.profile_status)
+            private val selectedView: LinearLayout = itemView.findViewById(R.id.selected_view)
+            
+            fun bind(profile: ProxyEntity) {
+                profileName.text = profile.displayName()
+                profileType.text = profile.displayType()
+                profileType.setTextColor(requireContext().getProtocolColor(profile.type))
+                
+                if (profile.status == 1) {
+                    profileStatus.text = getString(R.string.available, profile.ping)
+                    profileStatus.setTextColor(requireContext().getColour(R.color.material_green_500))
+                } else if (profile.status > 1) {
+                    profileStatus.text = getString(R.string.unavailable)
+                    profileStatus.setTextColor(requireContext().getColour(R.color.material_red_500))
+                } else {
+                    profileStatus.text = ""
+                }
+                
+                val isSelected = (autoSelectEnabled && position == 0) || 
+                                 (!autoSelectEnabled && DataStore.selectedProxy == profile.id)
+                selectedView.visibility = if (isSelected) View.VISIBLE else View.INVISIBLE
+                
+                itemView.setOnClickListener {
+                    // 手动选择节点时，关闭自动选择模式
+                    if (autoSelectEnabled) {
+                        autoSelectEnabled = false
+                    }
+                    DataStore.selectedProxy = profile.id
+                    updateSelectedNodeText()
+                    notifyDataSetChanged()
+                    
+                    // 如果已连接，重新加载服务以应用新节点
+                    if (DataStore.serviceState.canStop) {
+                        SagerNet.reloadService()
+                    }
+                }
+            }
+        }
     }
 
     override fun onPreferenceDataStoreChanged(store: PreferenceDataStore, key: String) {
@@ -257,6 +727,16 @@ class ConfigurationFragment @JvmOverloads constructor(
                         adapter.reload()
                     }
                 }
+            }
+            
+            // 更新连接按钮状态
+            if (::connectButton.isInitialized) {
+                updateConnectButtonState()
+            }
+            
+            // 更新节点列表
+            if (::nodeListAdapter.isInitialized) {
+                loadNodeList()
             }
         }
     }

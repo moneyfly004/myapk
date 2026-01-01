@@ -43,68 +43,73 @@ class GroupFragment : ToolbarFragment(R.layout.layout_group),
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        activity = requireActivity() as MainActivity
+        try {
+            activity = requireActivity() as MainActivity
 
-        ViewCompat.setOnApplyWindowInsetsListener(view, ListListener)
-        toolbar.setTitle(R.string.menu_group)
-        toolbar.inflateMenu(R.menu.add_group_menu)
-        toolbar.setOnMenuItemClickListener(this)
+            ViewCompat.setOnApplyWindowInsetsListener(view, ListListener)
+            toolbar.setTitle(R.string.menu_group)
+            toolbar.inflateMenu(R.menu.add_group_menu)
+            toolbar.setOnMenuItemClickListener(this)
 
-        groupListView = view.findViewById(R.id.group_list)
-        layoutManager = FixedLinearLayoutManager(groupListView)
-        groupListView.layoutManager = layoutManager
-        groupAdapter = GroupAdapter()
-        GroupManager.addListener(groupAdapter)
-        groupListView.adapter = groupAdapter
+            groupListView = view.findViewById(R.id.group_list)
+            layoutManager = FixedLinearLayoutManager(groupListView)
+            groupListView.layoutManager = layoutManager
+            groupAdapter = GroupAdapter()
+            GroupManager.addListener(groupAdapter)
+            groupListView.adapter = groupAdapter
+            // 在 adapter 创建后启动 reload
+            groupAdapter.startReload()
 
-        undoManager = UndoSnackbarManager(activity, groupAdapter)
+            undoManager = UndoSnackbarManager(activity, groupAdapter)
 
-        ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
-            ItemTouchHelper.UP or ItemTouchHelper.DOWN, ItemTouchHelper.START
-        ) {
-            override fun getSwipeDirs(
-                recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder
-            ): Int {
-                val proxyGroup = (viewHolder as GroupHolder).proxyGroup
-                if (proxyGroup.ungrouped || proxyGroup.id in GroupUpdater.updating) {
-                    return 0
-                }
-                return super.getSwipeDirs(recyclerView, viewHolder)
-            }
-
-            override fun getDragDirs(
-                recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder
-            ): Int {
-                val proxyGroup = (viewHolder as GroupHolder).proxyGroup
-                if (proxyGroup.ungrouped || proxyGroup.id in GroupUpdater.updating) {
-                    return 0
-                }
-                return super.getDragDirs(recyclerView, viewHolder)
-            }
-
-            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                val index = viewHolder.bindingAdapterPosition
-                groupAdapter.remove(index)
-                undoManager.remove(index to (viewHolder as GroupHolder).proxyGroup)
-            }
-
-            override fun onMove(
-                recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder,
-            ): Boolean {
-                groupAdapter.move(viewHolder.bindingAdapterPosition, target.bindingAdapterPosition)
-                return true
-            }
-
-            override fun clearView(
-                recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder,
+            ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
+                ItemTouchHelper.UP or ItemTouchHelper.DOWN, ItemTouchHelper.START
             ) {
-                super.clearView(recyclerView, viewHolder)
-                groupAdapter.commitMove()
-            }
-        }).attachToRecyclerView(groupListView)
+                override fun getSwipeDirs(
+                    recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder
+                ): Int {
+                    val proxyGroup = (viewHolder as GroupHolder).proxyGroup
+                    if (proxyGroup.ungrouped || proxyGroup.id in GroupUpdater.updating) {
+                        return 0
+                    }
+                    return super.getSwipeDirs(recyclerView, viewHolder)
+                }
 
+                override fun getDragDirs(
+                    recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder
+                ): Int {
+                    val proxyGroup = (viewHolder as GroupHolder).proxyGroup
+                    if (proxyGroup.ungrouped || proxyGroup.id in GroupUpdater.updating) {
+                        return 0
+                    }
+                    return super.getDragDirs(recyclerView, viewHolder)
+                }
+
+                override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                    val index = viewHolder.bindingAdapterPosition
+                    groupAdapter.remove(index)
+                    undoManager.remove(index to (viewHolder as GroupHolder).proxyGroup)
+                }
+
+                override fun onMove(
+                    recyclerView: RecyclerView,
+                    viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder,
+                ): Boolean {
+                    groupAdapter.move(viewHolder.bindingAdapterPosition, target.bindingAdapterPosition)
+                    return true
+                }
+
+                override fun clearView(
+                    recyclerView: RecyclerView,
+                    viewHolder: RecyclerView.ViewHolder,
+                ) {
+                    super.clearView(recyclerView, viewHolder)
+                    groupAdapter.commitMove()
+                }
+            }).attachToRecyclerView(groupListView)
+        } catch (e: Exception) {
+            Logs.e(e)
+        }
     }
 
     override fun onMenuItemClick(item: MenuItem): Boolean {
@@ -165,18 +170,30 @@ class GroupFragment : ToolbarFragment(R.layout.layout_group),
         val groupList = ArrayList<ProxyGroup>()
 
         suspend fun reload() {
-            val groups = SagerDatabase.groupDao.allGroups().toMutableList()
-            if (groups.size > 1 && SagerDatabase.proxyDao.countByGroup(groups.find { it.ungrouped }!!.id) == 0L) groups.removeAll { it.ungrouped }
-            groupList.clear()
-            groupList.addAll(groups)
-            groupListView.post {
-                notifyDataSetChanged()
+            try {
+                val groups = SagerDatabase.groupDao.allGroups().toMutableList()
+                groups.find { it.ungrouped }?.let { ungroupedGroup ->
+                    if (groups.size > 1 && SagerDatabase.proxyDao.countByGroup(ungroupedGroup.id) == 0L) {
+                        groups.removeAll { it.ungrouped }
+                    }
+                }
+                groupList.clear()
+                groupList.addAll(groups)
+                if (::groupListView.isInitialized) {
+                    groupListView.post {
+                        notifyDataSetChanged()
+                    }
+                }
+            } catch (e: Exception) {
+                Logs.e(e)
             }
         }
 
         init {
             setHasStableIds(true)
-
+        }
+        
+        fun startReload() {
             runOnDefaultDispatcher {
                 reload()
             }
@@ -483,13 +500,14 @@ class GroupFragment : ToolbarFragment(R.layout.layout_group),
                             (total - used).toBytesString()
                         )
                     }
-                    get("expire=([0-9]+)")?.apply {
-                        text += "\n"
-                        text += getString(
-                            R.string.subscription_expire,
-                            Util.timeStamp2Text(this.toLong() * 1000)
-                        )
-                    }
+                    // 移除到期时间显示，避免重复显示
+                    // get("expire=([0-9]+)")?.apply {
+                    //     text += "\n"
+                    //     text += getString(
+                    //         R.string.subscription_expire,
+                    //         Util.timeStamp2Text(this.toLong() * 1000)
+                    //     )
+                    // }
                 } catch (_: NumberFormatException) {
                     // ignore
                 }
