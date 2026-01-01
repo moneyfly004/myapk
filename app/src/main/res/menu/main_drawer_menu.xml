@@ -44,6 +44,10 @@
         android:id="@+id/about"
         android:checkableBehavior="single">
         <item
+            android:id="@+id/nav_packages"
+            android:icon="@drawable/ic_baseline_card_giftcard_24"
+            android:title="套餐购买" />
+        <item
             android:id="@+id/nav_about"
             android:icon="@drawable/ic_baseline_info_24"
             android:title="@string/menu_about" />

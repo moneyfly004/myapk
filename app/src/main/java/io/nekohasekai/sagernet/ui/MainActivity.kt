@@ -436,6 +436,7 @@ class MainActivity : ThemedActivity(),
             R.id.nav_traffic -> displayFragment(WebviewFragment())
             R.id.nav_tools -> displayFragment(ToolsFragment())
             R.id.nav_logcat -> displayFragment(LogcatFragment())
+            R.id.nav_packages -> displayFragment(PackagePurchaseFragment())
             R.id.nav_about -> displayFragment(AboutFragment())
             
             R.id.nav_logout -> {
@@ -562,7 +563,7 @@ class MainActivity : ThemedActivity(),
     /**
      * 在 onResume 时更新订阅
      */
-    private fun updateSubscriptionOnResume() {
+    fun updateSubscriptionOnResume() {
         val prefs = getSharedPreferences("subscription_prefs", MODE_PRIVATE)
         val hasSubscription = prefs.getBoolean("has_subscription", false)
         

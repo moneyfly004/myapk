@@ -476,5 +476,221 @@ class AuthRepository(private val context: Context) {
             username = getUsername()
         )
     }
+    
+    /**
+     * 获取套餐列表（不需要认证）
+     */
+    suspend fun getPackages(): Result<List<Package>> = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url("$API_BASE/packages/")
+                .get()
+                .build()
+            
+            val response = client.newCall(request).execute()
+            val body = response.body?.string()
+            
+            if (response.isSuccessful && body != null) {
+                val apiResponse = gson.fromJson(body, JsonObject::class.java)
+                
+                // 后台返回格式：{"success": true, "data": [...], "message": ""}
+                if (apiResponse.get("success")?.asBoolean != false) {
+                    val data = apiResponse.getAsJsonArray("data")
+                    val packages = mutableListOf<Package>()
+                    
+                    data?.forEach { element ->
+                        val pkgObj = element.asJsonObject
+                        packages.add(Package(
+                            id = pkgObj.get("id")?.asInt ?: 0,
+                            name = pkgObj.get("name")?.asString ?: "",
+                            description = pkgObj.get("description")?.asString,
+                            price = pkgObj.get("price")?.asDouble ?: 0.0,
+                            durationDays = pkgObj.get("duration_days")?.asInt ?: 0,
+                            deviceLimit = pkgObj.get("device_limit")?.asInt ?: 0,
+                            isRecommended = pkgObj.get("is_recommended")?.asBoolean ?: false
+                        ))
+                    }
+                    
+                    Log.d(TAG, "获取套餐列表成功: ${packages.size} 个套餐")
+                    Result.success(packages)
+                } else {
+                    val message = apiResponse.get("message")?.asString ?: "获取套餐列表失败"
+                    Log.e(TAG, "获取套餐列表失败: $message")
+                    Result.failure(Exception(message))
+                }
+            } else {
+                val errorMessage = try {
+                    if (body != null) {
+                        val apiResponse = gson.fromJson(body, JsonObject::class.java)
+                        apiResponse.get("message")?.asString ?: "获取套餐列表失败"
+                    } else {
+                        "获取套餐列表失败: HTTP ${response.code}"
+                    }
+                } catch (e: Exception) {
+                    "获取套餐列表失败: HTTP ${response.code}"
+                }
+                Log.e(TAG, errorMessage)
+                Result.failure(Exception(errorMessage))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "获取套餐列表异常", e)
+            Result.failure(e)
+        }
+    }
+    
+    /**
+     * 创建订单
+     */
+    suspend fun createOrder(
+        packageId: Int,
+        paymentMethod: String = "alipay",
+        couponCode: String? = null,
+        useBalance: Boolean = false,
+        balanceAmount: Double = 0.0
+    ): Result<Order> = withContext(Dispatchers.IO) {
+        try {
+            val token = getToken()
+            if (token == null) {
+                return@withContext Result.failure(Exception("未登录"))
+            }
+            
+            val json = JsonObject().apply {
+                addProperty("package_id", packageId)
+                addProperty("payment_method", paymentMethod)
+                addProperty("currency", "CNY")
+                couponCode?.let { addProperty("coupon_code", it) }
+                if (useBalance) {
+                    addProperty("use_balance", true)
+                    addProperty("balance_amount", balanceAmount)
+                }
+            }
+            
+            val request = Request.Builder()
+                .url("$API_BASE/orders/")
+                .header("Authorization", "Bearer $token")
+                .post(json.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+            
+            val response = client.newCall(request).execute()
+            val body = response.body?.string()
+            
+            if (response.isSuccessful && body != null) {
+                val apiResponse = gson.fromJson(body, JsonObject::class.java)
+                
+                if (apiResponse.get("success")?.asBoolean == true) {
+                    val data = apiResponse.getAsJsonObject("data")
+                    val order = Order(
+                        id = data.get("id")?.asInt ?: 0,
+                        orderNo = data.get("order_no")?.asString ?: "",
+                        amount = data.get("amount")?.asDouble ?: 0.0,
+                        finalAmount = data.get("final_amount")?.asDouble,
+                        status = data.get("status")?.asString ?: "pending",
+                        paymentUrl = data.get("payment_url")?.asString,
+                        paymentQrCode = data.get("payment_qr_code")?.asString
+                    )
+                    
+                    Log.d(TAG, "创建订单成功: ${order.orderNo}")
+                    Result.success(order)
+                } else {
+                    val message = apiResponse.get("message")?.asString ?: "创建订单失败"
+                    Result.failure(Exception(message))
+                }
+            } else {
+                val errorMessage = try {
+                    if (body != null) {
+                        val apiResponse = gson.fromJson(body, JsonObject::class.java)
+                        apiResponse.get("message")?.asString ?: "创建订单失败"
+                    } else {
+                        "创建订单失败"
+                    }
+                } catch (e: Exception) {
+                    "创建订单失败"
+                }
+                Result.failure(Exception(errorMessage))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "创建订单异常", e)
+            Result.failure(e)
+        }
+    }
+    
+    /**
+     * 查询订单状态
+     */
+    suspend fun getOrderStatus(orderNo: String): Result<OrderStatus> = withContext(Dispatchers.IO) {
+        try {
+            val token = getToken()
+            if (token == null) {
+                return@withContext Result.failure(Exception("未登录"))
+            }
+            
+            val request = Request.Builder()
+                .url("$API_BASE/orders/$orderNo/status")
+                .header("Authorization", "Bearer $token")
+                .get()
+                .build()
+            
+            val response = client.newCall(request).execute()
+            val body = response.body?.string()
+            
+            if (response.isSuccessful && body != null) {
+                val apiResponse = gson.fromJson(body, JsonObject::class.java)
+                
+                if (apiResponse.get("success")?.asBoolean == true) {
+                    val data = apiResponse.getAsJsonObject("data")
+                    val status = OrderStatus(
+                        orderNo = data.get("order_no")?.asString ?: orderNo,
+                        status = data.get("status")?.asString ?: "pending",
+                        amount = data.get("amount")?.asDouble ?: 0.0
+                    )
+                    
+                    Result.success(status)
+                } else {
+                    val message = apiResponse.get("message")?.asString ?: "查询订单状态失败"
+                    Result.failure(Exception(message))
+                }
+            } else {
+                Result.failure(Exception("查询订单状态失败"))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "查询订单状态异常", e)
+            Result.failure(e)
+        }
+    }
 }
+
+/**
+ * 套餐数据类
+ */
+data class Package(
+    val id: Int,
+    val name: String,
+    val description: String?,
+    val price: Double,
+    val durationDays: Int,
+    val deviceLimit: Int,
+    val isRecommended: Boolean
+)
+
+/**
+ * 订单数据类
+ */
+data class Order(
+    val id: Int,
+    val orderNo: String,
+    val amount: Double,
+    val finalAmount: Double?,
+    val status: String,
+    val paymentUrl: String?,
+    val paymentQrCode: String?
+)
+
+/**
+ * 订单状态数据类
+ */
+data class OrderStatus(
+    val orderNo: String,
+    val status: String,
+    val amount: Double
+)
 
