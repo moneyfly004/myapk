@@ -117,8 +117,13 @@ class MainActivity : ThemedActivity(),
         DataStore.configurationStore.registerChangeListener(this)
         GroupManager.userInterface = GroupInterfaceAdapter(this)
 
-        if (intent?.action == Intent.ACTION_VIEW) {
-            onNewIntent(intent)
+        // 处理 Intent，但只在首次创建时处理，避免重复处理
+        val currentIntent = intent
+        if (currentIntent?.action == Intent.ACTION_VIEW && currentIntent.data != null) {
+            // 只在有实际数据时才处理
+            onNewIntent(currentIntent)
+            // 清除 Intent，避免下次打开时重复处理
+            setIntent(Intent())
         }
 
         refreshNavMenu(DataStore.enableClashAPI)
@@ -153,6 +158,8 @@ class MainActivity : ThemedActivity(),
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        // 更新当前 Intent，避免使用旧的 Intent
+        setIntent(intent)
 
         val uri = intent.data ?: return
 

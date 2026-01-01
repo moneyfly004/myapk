@@ -1468,8 +1468,7 @@ class ConfigurationFragment @JvmOverloads constructor(
         val profileAccess = Mutex()
         val reloadAccess = Mutex()
 
-        inner class ConfigurationHolder(val view: View) : RecyclerView.ViewHolder(view),
-            PopupMenu.OnMenuItemClickListener {
+        inner class ConfigurationHolder(val view: View) : RecyclerView.ViewHolder(view) {
 
             lateinit var entity: ProxyEntity
 
@@ -1481,9 +1480,6 @@ class ConfigurationFragment @JvmOverloads constructor(
             val trafficText: TextView = view.findViewById(R.id.traffic_text)
             val selectedView: LinearLayout = view.findViewById(R.id.selected_view)
             val editButton: ImageView = view.findViewById(R.id.edit)
-            val shareLayout: LinearLayout = view.findViewById(R.id.share)
-            val shareLayer: LinearLayout = view.findViewById(R.id.share_layer)
-            val shareButton: ImageView = view.findViewById(R.id.shareIcon)
             val removeButton: ImageView = view.findViewById(R.id.remove)
 
             fun bind(proxyEntity: ProxyEntity, trafficData: TrafficData? = null) {
@@ -1608,13 +1604,8 @@ class ConfigurationFragment @JvmOverloads constructor(
                 }
 
                 val selectOrChain = select || proxyEntity.type == ProxyEntity.TYPE_CHAIN
-                shareLayout.isGone = selectOrChain
                 editButton.isGone = select
                 removeButton.isGone = select
-
-                proxyEntity.nekoBean?.apply {
-                    shareLayout.isGone = true
-                }
 
                 runOnDefaultDispatcher {
                     val selected = (selectedItem?.id ?: DataStore.selectedProxy) == proxyEntity.id
@@ -1626,86 +1617,11 @@ class ConfigurationFragment @JvmOverloads constructor(
                         selectedView.visibility = if (selected) View.VISIBLE else View.INVISIBLE
                     }
 
-                    fun showShare(anchor: View) {
-                        val popup = PopupMenu(requireContext(), anchor)
-                        popup.menuInflater.inflate(R.menu.profile_share_menu, popup.menu)
-
-                        when {
-                            !proxyEntity.haveStandardLink() -> {
-                                popup.menu.findItem(R.id.action_group_qr).subMenu?.removeItem(R.id.action_standard_qr)
-                                popup.menu.findItem(R.id.action_group_clipboard).subMenu?.removeItem(
-                                    R.id.action_standard_clipboard
-                                )
-                            }
-
-                            !proxyEntity.haveLink() -> {
-                                popup.menu.removeItem(R.id.action_group_qr)
-                                popup.menu.removeItem(R.id.action_group_clipboard)
-                            }
-                        }
-
-                        if (proxyEntity.nekoBean != null) {
-                            popup.menu.removeItem(R.id.action_group_configuration)
-                        }
-
-                        popup.setOnMenuItemClickListener(this@ConfigurationHolder)
-                        popup.show()
-                    }
-
-                    if (!(select || proxyEntity.type == ProxyEntity.TYPE_CHAIN)) {
-                        onMainDispatcher {
-                            shareLayer.setBackgroundColor(Color.TRANSPARENT)
-                            shareButton.setImageResource(R.drawable.ic_social_share)
-                            shareButton.setColorFilter(Color.GRAY)
-                            shareButton.isVisible = true
-
-                            shareLayout.setOnClickListener {
-                                showShare(it)
-                            }
-                        }
-                    }
                 }
 
             }
 
-            var currentName = ""
-            fun showCode(link: String) {
-                QRCodeDialog(link, currentName).showAllowingStateLoss(parentFragmentManager)
-            }
 
-            fun export(link: String) {
-                val success = SagerNet.trySetPrimaryClip(link)
-                (activity as MainActivity).snackbar(if (success) R.string.action_export_msg else R.string.action_export_err)
-                    .show()
-            }
-
-            override fun onMenuItemClick(item: MenuItem): Boolean {
-                try {
-                    currentName = entity.displayName()!!
-                    when (item.itemId) {
-                        R.id.action_standard_qr -> showCode(entity.toStdLink())
-                        R.id.action_standard_clipboard -> export(entity.toStdLink())
-                        R.id.action_universal_qr -> showCode(entity.requireBean().toUniversalLink())
-                        R.id.action_universal_clipboard -> export(
-                            entity.requireBean().toUniversalLink()
-                        )
-
-                        R.id.action_config_export_clipboard -> export(entity.exportConfig().first)
-                        R.id.action_config_export_file -> {
-                            val cfg = entity.exportConfig()
-                            DataStore.serverConfig = cfg.first
-                            startFilesForResult(
-                                (parentFragment as ConfigurationFragment).exportConfig, cfg.second
-                            )
-                        }
-                    }
-                } catch (e: Exception) {
-                    Logs.w(e)
-                    (activity as MainActivity).snackbar(e.readableMessage).show()
-                    return true
-                }
-                return true
-            }
         }
 
     }
