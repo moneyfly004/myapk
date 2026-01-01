@@ -14,6 +14,7 @@ import android.widget.Toast
 import androidx.activity.result.component1
 import androidx.activity.result.component2
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.danielstone.materialaboutlibrary.MaterialAboutFragment
@@ -35,6 +36,7 @@ import io.nekohasekai.sagernet.SagerNet
 import io.nekohasekai.sagernet.database.DataStore
 import moe.matsuri.nb4a.utils.Util
 import org.json.JSONObject
+import java.io.File
 
 class AboutFragment : ToolbarFragment(R.layout.layout_about) {
 
@@ -83,7 +85,7 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
                                 .subText(SagerNet.appVersionNameForDisplay)
                                 .setOnClickAction {
                                     requireContext().launchCustomTab(
-                                        "https://github.com/MatsuriDayo/NekoBoxForAndroid/releases"
+                                        "https://github.com/moneyfly004/myapk/releases"
                                     )
                                 }
                                 .build())
@@ -96,28 +98,10 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
                                 .build())
                         .addItem(
                             MaterialAboutActionItem.Builder()
-                                .text(R.string.check_update_preview)
-                                .setOnClickAction {
-                                    checkUpdate(true)
-                                }
-                                .build())
-                        .addItem(
-                            MaterialAboutActionItem.Builder()
                                 .icon(R.drawable.ic_baseline_layers_24)
                                 .text(getString(R.string.version_x, "sing-box"))
                                 .subText(Libcore.versionBox())
                                 .setOnClickAction { }
-                                .build())
-                        .addItem(
-                            MaterialAboutActionItem.Builder()
-                                .icon(R.drawable.ic_baseline_card_giftcard_24)
-                                .text(R.string.donate)
-                                .subText(R.string.donate_info)
-                                .setOnClickAction {
-                                    requireContext().launchCustomTab(
-                                        "https://matsuridayo.github.io/index_docs/#donate"
-                                    )
-                                }
                                 .build())
                         .apply {
                             PackageCache.awaitLoadSync()
@@ -183,18 +167,7 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
                                 .text(R.string.github)
                                 .setOnClickAction {
                                     requireContext().launchCustomTab(
-                                        "https://github.com/MatsuriDayo/NekoBoxForAndroid"
-
-                                    )
-                                }
-                                .build())
-                        .addItem(
-                            MaterialAboutActionItem.Builder()
-                                .icon(R.drawable.ic_qu_shadowsocks_foreground)
-                                .text(R.string.telegram)
-                                .setOnClickAction {
-                                    requireContext().launchCustomTab(
-                                        "https://t.me/MatsuriDayo"
+                                        "https://github.com/moneyfly004/myapk"
                                     )
                                 }
                                 .build())
@@ -219,30 +192,19 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
                         trySocks5(DataStore.mixedPort)
                     }
                     val response = client.newRequest().apply {
-                        if (checkPreview) {
-                            setURL("https://api.github.com/repos/MatsuriDayo/NekoBoxForAndroid/releases/tags/preview")
-                        } else {
-                            setURL("https://api.github.com/repos/MatsuriDayo/NekoBoxForAndroid/releases/latest")
-                        }
+                        setURL("https://api.github.com/repos/moneyfly004/myapk/releases/latest")
                     }.execute()
                     val release = JSONObject(Util.getStringBox(response.contentString))
                     val releaseName = release.getString("name")
+                    val releaseTag = release.getString("tag_name")
                     val releaseUrl = release.getString("html_url")
-                    var haveUpdate = releaseName.isNotBlank()
-                    haveUpdate = if (isPreview) {
-                        if (checkPreview) {
-                            haveUpdate && releaseName != BuildConfig.PRE_VERSION_NAME
-                        } else {
-                            // User: 1.3.9 pre-1.4.0 Stable: 1.3.9 -> No update
-                            haveUpdate && releaseName != BuildConfig.VERSION_NAME
-                        }
-                    } else {
-                        // User: 1.4.0 Preview: pre-1.4.0 -> No update
-                        // User: 1.4.0 Preview: pre-1.4.1 -> Update
-                        // User: 1.4.0 Stable: 1.4.0 -> No update
-                        // User: 1.4.0 Stable: 1.4.1 -> Update
-                        haveUpdate && !releaseName.contains(BuildConfig.VERSION_NAME)
-                    }
+                    
+                    // 获取当前版本号（去掉可能的预览后缀）
+                    val currentVersion = SagerNet.appVersionNameForDisplay.replace(" pre-.*".toRegex(), "")
+                    val latestVersion = releaseTag.replace("^v".toRegex(), "").replace(" pre-.*".toRegex(), "")
+                    
+                    val haveUpdate = latestVersion != currentVersion
+                    
                     runOnMainDispatcher {
                         if (haveUpdate) {
                             val context = requireContext()
@@ -255,7 +217,10 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
                                         releaseName
                                     )
                                 )
-                                .setPositiveButton(R.string.yes) { _, _ ->
+                                .setPositiveButton("下载并安装") { _, _ ->
+                                    downloadAndInstall(release)
+                                }
+                                .setNeutralButton("查看详情") { _, _ ->
                                     val intent = Intent(Intent.ACTION_VIEW, releaseUrl.toUri())
                                     context.startActivity(intent)
                                 }
@@ -271,6 +236,84 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
                         Toast.makeText(app, e.readableMessage, Toast.LENGTH_SHORT).show()
                     }
                 }
+            }
+        }
+        
+        private fun downloadAndInstall(release: JSONObject) {
+            runOnIoDispatcher {
+                try {
+                    val context = requireContext()
+                    val client = Libcore.newHttpClient().apply {
+                        modernTLS()
+                        trySocks5(DataStore.mixedPort)
+                    }
+                    
+                    // 获取 APK 文件
+                    val assets = release.getJSONArray("assets")
+                    val apkAsset = (0 until assets.length())
+                        .map { assets.getJSONObject(it) }
+                        .find { it.getString("name").endsWith(".apk") }
+                        ?: throw Exception("未找到 APK 文件")
+                    
+                    val downloadUrl = apkAsset.getString("browser_download_url")
+                    val fileName = apkAsset.getString("name")
+                    
+                    // 创建下载目录
+                    val downloadDir = File(context.getExternalFilesDir(null), "updates")
+                    downloadDir.mkdirs()
+                    val apkFile = File(downloadDir, fileName)
+                    
+                    // 下载 APK
+                    runOnMainDispatcher {
+                        Toast.makeText(context, "开始下载更新...", Toast.LENGTH_SHORT).show()
+                    }
+                    
+                    val response = client.newRequest().apply {
+                        setURL(downloadUrl)
+                    }.execute()
+                    
+                    response.writeTo(apkFile.canonicalPath)
+                    client.close()
+                    
+                    // 安装 APK
+                    runOnMainDispatcher {
+                        installApk(apkFile)
+                    }
+                } catch (e: Exception) {
+                    Logs.w(e)
+                    runOnMainDispatcher {
+                        Toast.makeText(app, "下载失败: ${e.readableMessage}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+        
+        private fun installApk(apkFile: File) {
+            try {
+                val context = requireContext()
+                val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    FileProvider.getUriForFile(
+                        context,
+                        BuildConfig.APPLICATION_ID + ".cache",
+                        apkFile
+                    )
+                } else {
+                    Uri.fromFile(apkFile)
+                }
+                
+                val intent = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
+                    setDataAndType(uri, "application/vnd.android.package-archive")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    }
+                    putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true)
+                }
+                
+                startActivity(intent)
+            } catch (e: Exception) {
+                Logs.w(e)
+                Toast.makeText(app, "安装失败: ${e.readableMessage}", Toast.LENGTH_LONG).show()
             }
         }
 
