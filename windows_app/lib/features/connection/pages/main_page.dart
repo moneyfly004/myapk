@@ -10,7 +10,6 @@ import '../providers/connection_provider.dart';
 import '../providers/routing_provider.dart';
 import '../../node/providers/node_provider.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../auth/repositories/auth_repository.dart';
 import '../../settings/pages/settings_page.dart';
 import '../../group/pages/group_page.dart';
 import '../../route/pages/route_page.dart';
@@ -19,9 +18,9 @@ import '../../traffic/pages/traffic_page.dart';
 import '../../tools/pages/tools_page.dart';
 import '../../about/pages/about_page.dart';
 import '../../package/pages/package_purchase_page.dart';
-import '../../subscription/services/subscription_service.dart';
 import '../../../services/vpn_service.dart' as vpn;
 import '../../../core/utils/debouncer.dart';
+import '../../../widgets/window/custom_title_bar.dart';
 
 class MainPage extends ConsumerStatefulWidget {
   const MainPage({super.key});
