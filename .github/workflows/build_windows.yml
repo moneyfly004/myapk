@@ -68,18 +68,20 @@ jobs:
           echo "version=$version" >> $env:GITHUB_OUTPUT
           echo "Version: $version"
           
-      - name: Create Release (if tag)
-        if: github.event_name == 'release'
+      - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: nekobox-windows-release.zip
+          tag_name: windows-v${{ steps.version.outputs.version }}
+          name: NekoBox for Windows ${{ steps.version.outputs.version }}
           body: |
             ## NekoBox for Windows ${{ steps.version.outputs.version }}
             
             ### 构建信息
             - **版本**: ${{ steps.version.outputs.version }}
-            - **构建时间**: ${{ github.event.release.published_at }}
+            - **构建时间**: ${{ github.event.head_commit.timestamp || github.run_started_at }}
             - **提交**: ${{ github.sha }}
+            - **分支**: ${{ github.ref_name }}
             
             ### 安装说明
             1. 下载并解压 `nekobox-windows-release.zip`
@@ -88,8 +90,14 @@ jobs:
             ### 系统要求
             - Windows 10 或更高版本
             - x64 架构
+            
+            ### 更新内容
+            - Windows 桌面版本首次发布
+            - 赛博朋克风格 UI
+            - 性能优化
           draft: false
           prerelease: false
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
