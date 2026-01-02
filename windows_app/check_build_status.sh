@@ -1,0 +1,30 @@
+#!/bin/bash
+# GitHub Actions 构建状态检查脚本
+
+REPO="moneyfly004/myapk"
+WORKFLOW="build_windows.yml"
+
+echo "=========================================="
+echo "GitHub Actions 构建状态检查"
+echo "=========================================="
+echo ""
+echo "仓库: $REPO"
+echo "工作流: $WORKFLOW"
+echo ""
+echo "GitHub Actions 页面:"
+echo "https://github.com/$REPO/actions"
+echo ""
+echo "工作流页面:"
+echo "https://github.com/$REPO/actions/workflows/$WORKFLOW"
+echo ""
+echo "=========================================="
+echo ""
+echo "请访问上述链接查看构建状态"
+echo ""
+echo "如果构建失败，请："
+echo "1. 点击失败的工作流运行"
+echo "2. 查看详细日志"
+echo "3. 根据错误信息修复问题"
+echo "4. 重新推送代码"
+echo ""
+

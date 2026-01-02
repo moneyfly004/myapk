@@ -112,21 +112,21 @@ class AppCache {
   factory AppCache() => _instance;
   AppCache._internal();
 
-  // 节点列表缓存（5分钟TTL）
+  // 节点列表缓存（5分钟TTL，减少内存占用）
   final nodeListCache = MemoryCache<String, dynamic>(
-    maxSize: 50,
+    maxSize: 30, // 从 50 减少到 30
     ttl: const Duration(minutes: 5),
   );
 
   // 用户信息缓存（10分钟TTL）
   final userInfoCache = MemoryCache<String, dynamic>(
-    maxSize: 10,
+    maxSize: 5, // 从 10 减少到 5
     ttl: const Duration(minutes: 10),
   );
 
   // 配置缓存（30分钟TTL）
   final configCache = MemoryCache<String, dynamic>(
-    maxSize: 20,
+    maxSize: 10, // 从 20 减少到 10
     ttl: const Duration(minutes: 30),
   );
 

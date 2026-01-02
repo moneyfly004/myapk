@@ -9,6 +9,17 @@ import '../../../widgets/performance/const_widgets.dart';
 import '../providers/connection_provider.dart';
 import '../providers/routing_provider.dart';
 import '../../node/providers/node_provider.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../auth/repositories/auth_repository.dart';
+import '../../settings/pages/settings_page.dart';
+import '../../group/pages/group_page.dart';
+import '../../route/pages/route_page.dart';
+import '../../log/pages/log_page.dart';
+import '../../traffic/pages/traffic_page.dart';
+import '../../tools/pages/tools_page.dart';
+import '../../about/pages/about_page.dart';
+import '../../package/pages/package_purchase_page.dart';
+import '../../subscription/services/subscription_service.dart';
 import '../../../services/vpn_service.dart' as vpn;
 import '../../../core/utils/debouncer.dart';
 
@@ -22,25 +33,33 @@ class MainPage extends ConsumerStatefulWidget {
 class _MainPageState extends ConsumerState<MainPage> {
   bool _isNodeListExpanded = false;
   final _debouncer = Debouncer(delay: const Duration(milliseconds: 300));
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: GridBackground(
-        gridColor: CyberpunkTheme.primaryNeon,
-        gridSize: 20.0,
-        child: Container(
-          decoration: const BoxDecoration(
-            gradient: CyberpunkGradients.backgroundGradient,
+      key: _scaffoldKey,
+      drawer: _buildDrawer(context),
+      body: Column(
+        children: [
+          // 自定义标题栏（支持拖拽、关闭、最大化、最小化）
+          CustomTitleBar(
+            title: 'NekoBox',
+            leading: IconButton(
+              icon: const Icon(Icons.menu, color: CyberpunkTheme.primaryNeon),
+              onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+            ),
           ),
-          child: SafeArea(
-            child: Column(
-              children: [
-                // 顶部标题栏
-                _buildTitleBar(context),
-                
-                // 主要内容区域
-                Expanded(
+          // 主内容
+          Expanded(
+            child: GridBackground(
+              gridColor: CyberpunkTheme.primaryNeon,
+              gridSize: 20.0,
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: CyberpunkGradients.backgroundGradient,
+                ),
+                child: SafeArea(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(24.0),
                     child: Column(
@@ -71,54 +90,14 @@ class _MainPageState extends ConsumerState<MainPage> {
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTitleBar(BuildContext context) {
-    return Container(
-      height: 60,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      decoration: BoxDecoration(
-        color: CyberpunkTheme.darkerBackground.withOpacity(0.8),
-        border: Border(
-          bottom: BorderSide(
-            color: CyberpunkTheme.primaryNeon.withOpacity(0.3),
-            width: 1,
-          ),
-        ),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.vpn_key,
-            color: CyberpunkTheme.primaryNeon,
-            size: 28,
-          ),
-          ConstWidgets.smallSeparator,
-          const NeonText(
-            text: 'NEKOBOX',
-            fontSize: 22,
-            neonColor: CyberpunkTheme.primaryNeon,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 3,
-          ),
-          const Spacer(),
-          // 菜单按钮
-          IconButton(
-            icon: ConstWidgets.icon(Icons.menu),
-            onPressed: () {
-              // TODO: 打开菜单
-            },
           ),
         ],
       ),
     );
   }
+
 
   Widget _buildUserInfoCard(BuildContext context) {
     return NeonCard(
@@ -228,16 +207,33 @@ class _MainPageState extends ConsumerState<MainPage> {
                   orElse: () => nodeState.nodes.first,
                 );
                 
+                // 获取路由模式
+                final routingMode = ref.read(routingModeProvider);
+                final isGlobalMode = routingMode == RoutingMode.global;
+                
+                // 获取路由规则（规则模式时使用）
+                List<Map<String, dynamic>>? rules;
+                if (!isGlobalMode) {
+                  // TODO: 从数据库加载启用的路由规则
+                  // final ruleState = ref.read(ruleListProvider);
+                  // rules = ruleState.rules
+                  //     .where((r) => r.enabled)
+                  //     .map((r) => r.toMap())
+                  //     .toList();
+                }
+                
                 // 生成配置
                 final config = vpn.generateSingBoxConfig(
                   server: selectedNode.server,
                   port: selectedNode.port,
                   type: selectedNode.type,
                   additionalConfig: selectedNode.config,
+                  isGlobalMode: isGlobalMode,
+                  rules: rules,
                 );
                 
-                // 连接 VPN
-                await vpnNotifier.connect(config);
+                // 连接 VPN（会自动设置系统代理）
+                await vpnNotifier.connect(config, isGlobalMode: isGlobalMode);
                 await connectionNotifier.connect(nodeState.selectedNodeId);
               }
             },
@@ -342,8 +338,10 @@ class _MainPageState extends ConsumerState<MainPage> {
   }
 
   Widget _buildNodeSelector(BuildContext context) {
-    // 使用 select 精确监听状态变化，减少重建
-    final nodeState = ref.watch(nodeListProvider);
+    // 使用 select 精确监听状态变化，减少重建（性能优化）
+    final nodeState = ref.watch(
+      nodeListProvider.select((state) => state),
+    );
     final selectedNodeId = nodeState.selectedNodeId;
     
     // 检查是否有可用节点
@@ -378,9 +376,9 @@ class _MainPageState extends ConsumerState<MainPage> {
                 _isNodeListExpanded = !_isNodeListExpanded;
               });
               // 展开时自动测速（使用防抖优化）
-              if (!_isNodeListExpanded) {
+              if (_isNodeListExpanded) {
                 _debouncer.call(() {
-                  ref.read(nodeListProvider.notifier).testAllNodes();
+                  ref.read(nodeListProvider.notifier).autoUrlTest();
                 });
               }
             },
@@ -518,6 +516,231 @@ class _MainPageState extends ConsumerState<MainPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDrawer(BuildContext context) {
+    final authState = ref.watch(authStateProvider);
+    
+    return Drawer(
+      backgroundColor: CyberpunkTheme.darkerBackground,
+      child: Column(
+        children: [
+          // 用户信息头部
+          Container(
+            padding: const EdgeInsets.all(24.0),
+            decoration: BoxDecoration(
+              color: CyberpunkTheme.primaryNeon.withOpacity(0.1),
+              border: Border(
+                bottom: BorderSide(
+                  color: CyberpunkTheme.primaryNeon.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const NeonText(
+                  'NekoBox',
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+                const SizedBox(height: 8),
+                if (authState.email != null)
+                  NeonText(
+                    text: authState.email!,
+                    fontSize: 14,
+                    neonColor: CyberpunkTheme.textSecondary,
+                  ),
+              ],
+            ),
+          ),
+          
+          // 菜单项
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.dashboard,
+                  title: '配置',
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    // 已经在主页
+                  },
+                ),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.group,
+                  title: '分组',
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const GroupPage(),
+                      ),
+                    );
+                  },
+                ),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.route,
+                  title: '路由',
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const RoutePage(),
+                      ),
+                    );
+                  },
+                ),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.settings,
+                  title: '设置',
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const SettingsPage(),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(color: CyberpunkTheme.primaryNeon),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.bug_report,
+                  title: '日志',
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const LogPage(),
+                      ),
+                    );
+                  },
+                ),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.dashboard_customize,
+                  title: '流量统计',
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const TrafficPage(),
+                      ),
+                    );
+                  },
+                ),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.build,
+                  title: '工具',
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const ToolsPage(),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(color: CyberpunkTheme.primaryNeon),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.card_giftcard,
+                  title: '套餐购买',
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const PackagePurchasePage(),
+                      ),
+                    );
+                  },
+                ),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.info,
+                  title: '关于',
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const AboutPage(),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(color: CyberpunkTheme.primaryNeon),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.logout,
+                  title: '退出登录',
+                  onTap: () async {
+                    Navigator.of(context).pop();
+                    final shouldLogout = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        backgroundColor: CyberpunkTheme.darkerBackground,
+                        title: const NeonText(
+                          text: '退出登录',
+                          fontSize: 18,
+                        ),
+                        content: const NeonText(
+                          text: '确定要退出登录吗？',
+                          fontSize: 14,
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const NeonText(text: '取消'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            child: const NeonText(
+                              text: '确定',
+                              neonColor: Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (shouldLogout == true) {
+                      await ref.read(authStateProvider.notifier).logout();
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: CyberpunkTheme.primaryNeon,
+      ),
+      title: NeonText(
+        text: title,
+        fontSize: 16,
+      ),
+      onTap: onTap,
+      hoverColor: CyberpunkTheme.primaryNeon.withOpacity(0.1),
     );
   }
 }
