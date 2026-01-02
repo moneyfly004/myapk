@@ -67,7 +67,15 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/main',
-      builder: (context, state) => const MainPage(),
+      builder: (context, state) {
+        // 双重检查：确保已登录才能进入主界面
+        final authState = ProviderScope.containerOf(context).read(authStateProvider);
+        if (!authState.isAuthenticated) {
+          // 如果未登录，重定向到登录页
+          return const LoginPage();
+        }
+        return const MainPage();
+      },
     ),
   ],
   redirect: (context, state) {
