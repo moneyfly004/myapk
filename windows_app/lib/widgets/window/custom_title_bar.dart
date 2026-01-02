@@ -42,7 +42,7 @@ class _CustomTitleBarState extends State<CustomTitleBar> {
     try {
       await windowManager.minimize();
     } catch (e) {
-      logger.Logger.error('最小化窗口失败', e);
+      Logger.error('最小化窗口失败', e);
     }
   }
 
@@ -55,7 +55,7 @@ class _CustomTitleBarState extends State<CustomTitleBar> {
       }
       await _checkMaximized();
     } catch (e) {
-      logger.Logger.error('最大化/还原窗口失败', e);
+      Logger.error('最大化/还原窗口失败', e);
     }
   }
 
@@ -64,7 +64,7 @@ class _CustomTitleBarState extends State<CustomTitleBar> {
       // 最小化到托盘而不是关闭
       await windowManager.hide();
     } catch (e) {
-      logger.Logger.error('隐藏窗口失败', e);
+      Logger.error('隐藏窗口失败', e);
     }
   }
 

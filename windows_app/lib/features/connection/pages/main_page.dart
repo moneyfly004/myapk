@@ -541,7 +541,7 @@ class _MainPageState extends ConsumerState<MainPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const NeonText(
-                  'NekoBox',
+                  text: 'NekoBox',
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
