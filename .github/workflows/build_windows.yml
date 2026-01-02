@@ -1,0 +1,98 @@
+name: Build Windows Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'windows_app/**'
+      - '.github/workflows/build_windows.yml'
+  pull_request:
+    branches:
+      - main
+      - master
+    paths:
+      - 'windows_app/**'
+  workflow_dispatch:
+  release:
+    types: [created]
+
+jobs:
+  build-windows:
+    name: Build Windows Release
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+          
+      - name: Install dependencies
+        working-directory: windows_app
+        run: flutter pub get
+        
+      - name: Analyze code
+        working-directory: windows_app
+        run: flutter analyze --no-fatal-infos
+        
+      - name: Build Windows Release
+        working-directory: windows_app
+        run: flutter build windows --release
+        
+      - name: Create Release Archive
+        working-directory: windows_app/build/windows/x64/runner/Release
+        run: |
+          $compress = @{
+            Path = "."
+            CompressionLevel = "Optimal"
+            DestinationPath = "${{ github.workspace }}/nekobox-windows-release.zip"
+          }
+          Compress-Archive @compress
+          
+      - name: Upload Release Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nekobox-windows-release
+          path: nekobox-windows-release.zip
+          retention-days: 30
+          
+      - name: Get Version Info
+        id: version
+        working-directory: windows_app
+        run: |
+          $version = (Get-Content pubspec.yaml | Select-String "version:").ToString().Split(":")[1].Trim()
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+          echo "Version: $version"
+          
+      - name: Create Release (if tag)
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: nekobox-windows-release.zip
+          body: |
+            ## NekoBox for Windows ${{ steps.version.outputs.version }}
+            
+            ### 构建信息
+            - **版本**: ${{ steps.version.outputs.version }}
+            - **构建时间**: ${{ github.event.release.published_at }}
+            - **提交**: ${{ github.sha }}
+            
+            ### 安装说明
+            1. 下载并解压 `nekobox-windows-release.zip`
+            2. 运行 `nekobox_windows.exe`
+            
+            ### 系统要求
+            - Windows 10 或更高版本
+            - x64 架构
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
