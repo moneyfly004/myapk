@@ -428,4 +428,10 @@ class NodeListNotifier extends StateNotifier<NodeListState> {
       state = state.copyWith(error: e.toString());
     }
   }
+
+  // 刷新节点列表（公共方法）
+  Future<void> refreshNodes() async {
+    _cache.clear();
+    await _loadNodes();
+  }
 }

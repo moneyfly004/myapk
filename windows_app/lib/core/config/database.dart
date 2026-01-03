@@ -25,7 +25,7 @@ class AppDatabase {
   }
 
   Future<Database> _initDatabase() async {
-    return await measurePerformanceSync('database_init', () async {
+    return await measurePerformance('database_init', () async {
       final documentsDirectory = await getApplicationDocumentsDirectory();
       final path = join(documentsDirectory.path, 'nekobox.db');
 
@@ -35,7 +35,7 @@ class AppDatabase {
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
       );
-    }) as Future<Database>;
+    });
   }
 
   Future<void> _onCreate(Database db, int version) async {

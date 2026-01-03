@@ -73,18 +73,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
           // 获取订阅信息
           final subscriptionResult = await _repository.getUserSubscription();
           subscriptionResult.when(
-            success: (_) async {
+            success: (subscription) async {
               // 订阅信息获取成功，自动配置订阅
               try {
+                Logger.debug('开始自动配置订阅，URL: ${subscription.universalUrl}');
                 final subscriptionService = SubscriptionService(_repository, _ref);
                 await subscriptionService.checkAndAddSubscription();
-              } catch (e) {
+                Logger.debug('订阅自动配置完成');
+              } catch (e, stackTrace) {
                 // 自动配置失败不影响登录，只记录错误
                 Logger.error('自动配置订阅失败: $e');
+                Logger.error('堆栈跟踪: $stackTrace');
               }
             },
-            failure: (_) {
+            failure: (error) {
               // 获取订阅失败不影响登录
+              Logger.warning('获取订阅信息失败: $error');
             },
           );
           state = state.copyWith(

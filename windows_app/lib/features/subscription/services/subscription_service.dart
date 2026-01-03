@@ -121,7 +121,14 @@ class SubscriptionService {
             await db.insertNode(nodeMap);
           }
           
-          // 节点列表会在下次访问时自动重新加载（通过清除缓存触发）
+          // 刷新节点列表
+          try {
+            final nodeNotifier = _ref.read(nodeListProvider.notifier);
+            await nodeNotifier.refreshNodes();
+            Logger.debug('节点列表已刷新');
+          } catch (e) {
+            Logger.error('刷新节点列表失败: $e');
+          }
           
           Logger.debug('成功解析并导入 ${nodes.length} 个节点到分组: ${subscriptionGroup.name}');
         }
