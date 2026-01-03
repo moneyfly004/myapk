@@ -6,6 +6,7 @@ import '../../auth/repositories/auth_repository.dart';
 import 'subscription_parser.dart';
 import '../../group/providers/group_provider.dart';
 import '../../group/models/group_model.dart';
+import '../../node/providers/node_provider.dart';
 
 class SubscriptionService {
   static const String _subscriptionUrlKey = 'subscription_url';
