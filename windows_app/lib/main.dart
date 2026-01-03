@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:io' show Platform;
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'core/theme/cyberpunk_theme.dart';
 import 'features/connection/pages/main_page.dart';
 import 'features/auth/pages/login_page.dart';
@@ -14,6 +16,12 @@ import 'core/config/version_config.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // 初始化 sqflite for Windows (使用 FFI)
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
   
   // 初始化版本配置（参考 Android 端）
   await VersionConfig.instance.initialize();

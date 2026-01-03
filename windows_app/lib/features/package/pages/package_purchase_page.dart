@@ -117,6 +117,11 @@ class _PackagePurchasePageState extends ConsumerState<PackagePurchasePage> {
 
   Future<void> _createOrder(Package pkg) async {
     try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
       final result = await _authRepository.createOrder(
         packageId: pkg.id,
         paymentMethod: 'alipay',
@@ -124,30 +129,76 @@ class _PackagePurchasePageState extends ConsumerState<PackagePurchasePage> {
 
       result.when(
         success: (order) {
+          setState(() {
+            _isLoading = false;
+          });
           // 订单已创建，开始支付流程
 
           if (order.status == 'paid') {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('订单已支付成功')),
+              const SnackBar(
+                content: Text('订单已支付成功'),
+                backgroundColor: Colors.green,
+              ),
             );
             _updateSubscription();
           } else if (order.paymentUrl != null || order.paymentQrCode != null) {
             _showPaymentDialog(order);
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('支付链接生成失败')),
+              const SnackBar(
+                content: Text('支付链接生成失败，请稍后重试'),
+                backgroundColor: Colors.orange,
+              ),
             );
           }
         },
         failure: (error) {
+          setState(() {
+            _isLoading = false;
+            // 提取更友好的错误消息
+            final errorMessage = error.toString();
+            if (errorMessage.contains('网络') || 
+                errorMessage.contains('连接') || 
+                errorMessage.contains('timeout') ||
+                errorMessage.contains('SocketException')) {
+              _error = '网络连接失败，请检查网络连接后重试';
+            } else if (errorMessage.contains('未登录') || errorMessage.contains('401')) {
+              _error = '登录已过期，请重新登录';
+            } else if (errorMessage.contains('余额') || errorMessage.contains('balance')) {
+              _error = '余额不足，请充值后重试';
+            } else {
+              _error = '创建订单失败: ${errorMessage.replaceAll('Exception: ', '')}';
+            }
+          });
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('创建订单失败: ${error.toString()}')),
+            SnackBar(
+              content: Text(_error ?? '创建订单失败'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+            ),
           );
         },
       );
     } catch (e) {
+      setState(() {
+        _isLoading = false;
+        final errorMessage = e.toString();
+        if (errorMessage.contains('网络') || 
+            errorMessage.contains('连接') || 
+            errorMessage.contains('timeout') ||
+            errorMessage.contains('SocketException')) {
+          _error = '网络连接失败，请检查网络连接后重试';
+        } else {
+          _error = '创建订单失败: ${errorMessage.replaceAll('Exception: ', '')}';
+        }
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('创建订单失败: $e')),
+        SnackBar(
+          content: Text(_error ?? '创建订单失败'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
       );
     }
   }

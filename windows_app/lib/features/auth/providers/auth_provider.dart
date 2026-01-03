@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../repositories/auth_repository.dart';
+import '../../subscription/services/subscription_service.dart';
+import '../../../core/utils/logger.dart';
 
 // AuthRepository 单例
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
@@ -39,13 +41,14 @@ class AuthState {
 
 // 认证状态 Provider
 final authStateProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier(ref.read(authRepositoryProvider));
+  return AuthNotifier(ref.read(authRepositoryProvider), ref);
 });
 
 class AuthNotifier extends StateNotifier<AuthState> {
   final AuthRepository _repository;
+  final Ref _ref;
 
-  AuthNotifier(this._repository) : super(AuthState()) {
+  AuthNotifier(this._repository, this._ref) : super(AuthState()) {
     _checkAuthStatus();
   }
 
@@ -68,7 +71,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return result.when(
         success: (response) async {
           // 获取订阅信息
-          await _repository.getUserSubscription();
+          final subscriptionResult = await _repository.getUserSubscription();
+          subscriptionResult.when(
+            success: (_) async {
+              // 订阅信息获取成功，自动配置订阅
+              try {
+                final subscriptionService = SubscriptionService(_repository, _ref);
+                await subscriptionService.checkAndAddSubscription();
+              } catch (e) {
+                // 自动配置失败不影响登录，只记录错误
+                Logger.error('自动配置订阅失败: $e');
+              }
+            },
+            failure: (_) {
+              // 获取订阅失败不影响登录
+            },
+          );
           state = state.copyWith(
             isAuthenticated: true,
             email: response.email,
