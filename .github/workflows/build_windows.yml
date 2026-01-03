@@ -104,4 +104,36 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Upload Build Artifact (if not tag)
+        if: "!startsWith(github.ref, 'refs/tags/') && github.event_name == 'push'"
+        uses: softprops/action-gh-release@v1
+        with:
+          files: nekobox-windows-release.zip
+          tag_name: build-${{ github.run_number }}
+          name: NekoBox for Windows Build ${{ github.run_number }}
+          body: |
+            ## NekoBox for Windows Build ${{ github.run_number }}
+            
+            ### 构建信息
+            - **版本**: ${{ steps.version.outputs.version }}
+            - **构建编号**: ${{ github.run_number }}
+            - **构建时间**: ${{ github.run_started_at }}
+            - **提交**: ${{ github.sha }}
+            - **分支**: ${{ github.ref_name }}
+            
+            ### 安装说明
+            1. 下载并解压 `nekobox-windows-release.zip`
+            2. 运行 `nekobox_windows.exe`
+            
+            ### 系统要求
+            - Windows 10 或更高版本
+            - x64 架构
+            
+            **注意**: 这是自动构建版本，用于测试目的。
+          draft: true
+          prerelease: true
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
