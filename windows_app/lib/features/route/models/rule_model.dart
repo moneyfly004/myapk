@@ -112,7 +112,7 @@ class RuleEntity {
     if (packages.isNotEmpty) parts.add('应用: ${packages.length} 个');
 
     if (parts.length > 3) {
-      return parts.sublist(0, 3).join('\n') + '\n...';
+      return '${parts.sublist(0, 3).join('\n')}\n...';
     }
     return parts.join('\n');
   }

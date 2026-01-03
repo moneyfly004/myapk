@@ -266,7 +266,7 @@ class AppDatabase {
     List<dynamic>? whereArgs,
     String? orderBy,
   }) async {
-    final cacheKey = 'groups_${where}_${orderBy}';
+    final cacheKey = 'groups_${where ?? ''}_${orderBy ?? ''}';
     final cached = _cache.get(cacheKey);
     if (cached != null) {
       return cached as List<Map<String, dynamic>>;
@@ -485,7 +485,7 @@ class AppDatabase {
     List<dynamic>? whereArgs,
     String? orderBy,
   }) async {
-    final cacheKey = 'rules_${where}_${orderBy}';
+    final cacheKey = 'rules_${where ?? ''}_${orderBy ?? ''}';
     final cached = _cache.get(cacheKey);
     if (cached != null) {
       return cached as List<Map<String, dynamic>>;

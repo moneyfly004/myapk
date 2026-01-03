@@ -6,7 +6,6 @@ import '../../auth/repositories/auth_repository.dart';
 import 'subscription_parser.dart';
 import '../../group/providers/group_provider.dart';
 import '../../group/models/group_model.dart';
-import '../../node/providers/node_provider.dart';
 
 class SubscriptionService {
   static const String _subscriptionUrlKey = 'subscription_url';
@@ -70,11 +69,11 @@ class SubscriptionService {
         if (nodes.isNotEmpty) {
           // 查找或创建订阅分组
           final groupNotifier = _ref.read(groupListProvider.notifier);
-          final nodeNotifier = _ref.read(nodeListProvider.notifier);
           
           ProxyGroup? subscriptionGroup;
           try {
-            subscriptionGroup = groupNotifier.state.groups.firstWhere(
+            final groupState = _ref.read(groupListProvider);
+            subscriptionGroup = groupState.groups.firstWhere(
               (g) => g.type == GroupType.subscription && 
                      getBaseSubscriptionUrl(g.subscriptionUrl ?? '') == baseUrl,
             );
@@ -92,7 +91,8 @@ class SubscriptionService {
             );
             // 重新加载以获取新分组的完整信息
             await groupNotifier.loadGroups();
-            subscriptionGroup = groupNotifier.state.groups.firstWhere(
+            final groupState = _ref.read(groupListProvider);
+            subscriptionGroup = groupState.groups.firstWhere(
               (g) => g.id == newGroupId,
             );
           } else {
@@ -105,7 +105,7 @@ class SubscriptionService {
           
           // 删除旧节点（通过数据库查询该分组下的所有节点）
           final db = AppDatabase();
-          final oldNodes = await db.queryNodes(where: 'group_id = ?', whereArgs: [subscriptionGroup!.id]);
+          final oldNodes = await db.queryNodes(where: 'group_id = ?', whereArgs: [subscriptionGroup.id]);
           for (final oldNodeMap in oldNodes) {
             final oldNodeId = oldNodeMap['id'] as int;
             await db.deleteNode(oldNodeId);
@@ -115,7 +115,7 @@ class SubscriptionService {
           final now = DateTime.now().millisecondsSinceEpoch;
           for (final node in nodes) {
             final nodeMap = node.toMap();
-            nodeMap['group_id'] = subscriptionGroup!.id;
+            nodeMap['group_id'] = subscriptionGroup.id;
             nodeMap['created_at'] = now;
             nodeMap['updated_at'] = now;
             await db.insertNode(nodeMap);

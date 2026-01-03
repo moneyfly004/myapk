@@ -167,7 +167,7 @@ class _RoutePageState extends ConsumerState<RoutePage> {
               Switch(
                 value: rule.enabled,
                 onChanged: (value) async {
-                  await ref.read(ruleListProvider.notifier).toggleRule(rule.id!, value);
+                  await ref.read(ruleListProvider.notifier).toggleRule(rule.id, value);
                 },
                 activeColor: CyberpunkTheme.primaryNeon,
               ),
