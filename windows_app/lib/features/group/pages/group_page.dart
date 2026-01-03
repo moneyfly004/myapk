@@ -4,10 +4,10 @@ import '../../../core/theme/cyberpunk_theme.dart';
 import '../../../widgets/cyberpunk/neon_card.dart';
 import '../../../widgets/cyberpunk/neon_text.dart';
 import '../../../widgets/cyberpunk/grid_background.dart';
-import '../../../widgets/cyberpunk/neon_button.dart';
+
 import '../providers/group_provider.dart';
 import '../models/group_model.dart';
-import '../../node/providers/node_provider.dart';
+
 import '../../../core/config/database.dart';
 
 class GroupPage extends ConsumerStatefulWidget {
@@ -180,7 +180,6 @@ class _GroupPageState extends ConsumerState<GroupPage> {
     VoidCallback? onDelete,
   }) {
     final typeName = group.type == GroupType.subscription ? '订阅' : '基础';
-    final nodeCount = 0; // TODO: 从数据库查询节点数量
     
     return FutureBuilder<int>(
       future: AppDatabase().queryNodesByGroup(group.id).then((nodes) => nodes.length),
@@ -346,7 +345,7 @@ class _GroupPageState extends ConsumerState<GroupPage> {
                 
                 Navigator.of(context).pop();
                 
-                final notifier = context.read(groupListProvider.notifier);
+                final notifier = ref.read(groupListProvider.notifier);
                 final id = await notifier.createGroup(
                   name: nameController.text,
                   type: selectedType,
@@ -396,6 +395,40 @@ class _GroupPageState extends ConsumerState<GroupPage> {
             child: const NeonText(
               text: '确定',
               neonColor: CyberpunkTheme.primaryNeon,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteConfirmDialog(
+    BuildContext context,
+    String name,
+    VoidCallback onDelete,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: CyberpunkTheme.darkerBackground,
+        title: const NeonText(text: '删除分组', fontSize: 18),
+        content: Text(
+          '确定要删除 "$name" 吗？',
+          style: const TextStyle(color: CyberpunkTheme.textPrimary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const NeonText(text: '取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              onDelete();
+            },
+            child: const NeonText(
+              text: '删除',
+              neonColor: Colors.red,
             ),
           ),
         ],

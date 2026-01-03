@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/database.dart';
-import '../../../core/utils/performance_monitor.dart';
+
 import '../models/rule_model.dart';
 
 // 路由规则列表状态
@@ -79,7 +79,6 @@ class RuleListNotifier extends StateNotifier<RuleListState> {
     bool enabled = true,
   }) async {
     try {
-      final now = DateTime.now();
       final ruleMap = {
         'name': name,
         'config': config,

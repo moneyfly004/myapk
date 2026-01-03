@@ -167,7 +167,7 @@ class _RoutePageState extends ConsumerState<RoutePage> {
               Switch(
                 value: rule.enabled,
                 onChanged: (value) async {
-                  await context.read(ruleListProvider.notifier).toggleRule(rule.id, value);
+                  await ref.read(ruleListProvider.notifier).toggleRule(rule.id!, value);
                 },
                 activeColor: CyberpunkTheme.primaryNeon,
               ),
@@ -200,7 +200,7 @@ class _RoutePageState extends ConsumerState<RoutePage> {
                   );
                   
                   if (confirmed == true) {
-                    await context.read(ruleListProvider.notifier).deleteRule(rule.id);
+                    await ref.read(ruleListProvider.notifier).deleteRule(rule.id);
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('规则已删除')),
@@ -299,7 +299,7 @@ class _RoutePageState extends ConsumerState<RoutePage> {
                 
                 Navigator.of(context).pop();
                 
-                final notifier = context.read(ruleListProvider.notifier);
+                final notifier = ref.read(ruleListProvider.notifier);
                 final id = await notifier.createRule(
                   name: nameController.text,
                   outbound: selectedOutbound,
@@ -341,8 +341,8 @@ class _RoutePageState extends ConsumerState<RoutePage> {
             onPressed: () async {
               Navigator.of(context).pop();
               // TODO: 实现重置路由规则的逻辑（删除所有规则）
-              final notifier = context.read(ruleListProvider.notifier);
-              final rules = context.read(ruleListProvider).rules;
+              final notifier = ref.read(ruleListProvider.notifier);
+              final rules = ref.read(ruleListProvider).rules;
               
               for (final rule in rules) {
                 await notifier.deleteRule(rule.id);

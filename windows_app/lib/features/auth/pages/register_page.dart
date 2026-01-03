@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import '../providers/auth_provider.dart';
-import '../repositories/auth_repository.dart';
+
 import '../../../core/theme/cyberpunk_theme.dart';
 import '../../../widgets/cyberpunk/neon_button.dart';
 import '../../../widgets/cyberpunk/neon_card.dart';
@@ -152,12 +152,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const NeonText(
-                          '注册账户',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
+                          text: '注册账户',
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
                         ),
                         const SizedBox(height: 32),
                         TextFormField(
@@ -363,7 +360,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                           onPressed: () {
                             Navigator.of(context).pop();
                           },
-                          child: const NeonText('已有账户？登录'),
+                          child: const NeonText(text: '已有账户？登录'),
                         ),
                       ],
                     ),

@@ -4,7 +4,6 @@ import 'dart:async';
 import '../../../core/theme/cyberpunk_theme.dart';
 import '../../../widgets/cyberpunk/neon_text.dart';
 import '../../../widgets/cyberpunk/grid_background.dart';
-import '../../../core/utils/logger.dart';
 
 class LogPage extends ConsumerStatefulWidget {
   const LogPage({super.key});

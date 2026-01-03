@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
-import '../repositories/auth_repository.dart';
+
 import '../providers/auth_provider.dart';
 import '../../../core/theme/cyberpunk_theme.dart';
 import '../../../widgets/cyberpunk/neon_button.dart';
@@ -156,12 +156,9 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const NeonText(
-                          '忘记密码',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
+                          text: '忘记密码',
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
                         ),
                         const SizedBox(height: 32),
                         TextFormField(
@@ -343,7 +340,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
                           onPressed: () {
                             Navigator.of(context).pop();
                           },
-                          child: const NeonText('返回登录'),
+                          child: const NeonText(text: '返回登录'),
                         ),
                       ],
                     ),

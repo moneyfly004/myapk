@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/database.dart';
-import '../../../core/utils/performance_monitor.dart';
+
 import '../models/group_model.dart';
 
 // 分组列表状态
@@ -69,7 +69,6 @@ class GroupListNotifier extends StateNotifier<GroupListState> {
     bool ungrouped = false,
   }) async {
     try {
-      final now = DateTime.now();
       final groupMap = {
         'name': name,
         'type': type,

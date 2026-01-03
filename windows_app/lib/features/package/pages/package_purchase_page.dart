@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter/webview_flutter.dart' as webview_flutter;
 import '../../../core/theme/cyberpunk_theme.dart';
 import '../../../widgets/cyberpunk/neon_card.dart';
 import '../../../widgets/cyberpunk/neon_text.dart';
@@ -24,9 +24,8 @@ class _PackagePurchasePageState extends ConsumerState<PackagePurchasePage> {
   List<Package> _packages = [];
   bool _isLoading = true;
   String? _error;
-  Order? _currentOrder;
-  Timer? _paymentStatusTimer;
-  WebViewController? _webViewController;
+    Timer? _paymentStatusTimer;
+  webview_flutter.WebViewController? _webViewController;
 
   @override
   void initState() {
@@ -125,9 +124,7 @@ class _PackagePurchasePageState extends ConsumerState<PackagePurchasePage> {
 
       result.when(
         success: (order) {
-          setState(() {
-            _currentOrder = order;
-          });
+          // 订单已创建，开始支付流程
 
           if (order.status == 'paid') {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -196,25 +193,25 @@ class _PackagePurchasePageState extends ConsumerState<PackagePurchasePage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Expanded(
-                child: WebView(
-                  initialUrl: paymentUrl,
-                  javascriptMode: JavascriptMode.unrestricted,
-                  onWebViewCreated: (controller) {
-                    _webViewController = controller;
-                  },
-                  navigationDelegate: NavigationDelegate(
-                    onNavigationRequest: (request) {
-                      // 处理 alipays:// 协议
-                      if (request.url.startsWith('alipays://')) {
-                        launchUrl(
-                          Uri.parse(request.url),
-                          mode: LaunchMode.externalApplication,
-                        );
-                        return NavigationDecision.prevent;
-                      }
-                      return NavigationDecision.navigate;
-                    },
-                  ),
+                child: webview_flutter.WebViewWidget(
+                  controller: (_webViewController ??= webview_flutter.WebViewController()
+                    ..setJavaScriptMode(webview_flutter.JavaScriptMode.unrestricted)
+                    ..setNavigationDelegate(
+                      webview_flutter.NavigationDelegate(
+                        onNavigationRequest: (request) {
+                          // 处理 alipays:// 协议
+                          if (request.url.startsWith('alipays://')) {
+                            launchUrl(
+                              Uri.parse(request.url),
+                              mode: LaunchMode.externalApplication,
+                            );
+                            return webview_flutter.NavigationDecision.prevent;
+                          }
+                          return webview_flutter.NavigationDecision.navigate;
+                        },
+                      ),
+                    )
+                    ..loadRequest(Uri.parse(paymentUrl))),
                 ),
               ),
               const SizedBox(height: 16),

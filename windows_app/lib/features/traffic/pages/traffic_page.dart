@@ -25,8 +25,7 @@ class _TrafficPageState extends ConsumerState<TrafficPage> {
 
   Future<void> _loadYacdUrl() async {
     // TODO: 从设置中加载 YACD URL
-    final settings = ref.read(settingsProvider);
-    // 默认使用本地 Clash API
+        // 默认使用本地 Clash API
     setState(() {
       _yacdUrl = 'http://127.0.0.1:9090/ui/#/';
     });
@@ -92,7 +91,6 @@ class _TrafficPageState extends ConsumerState<TrafficPage> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
-    
     if (!settings.enableClashAPI) {
       return Scaffold(
         appBar: AppBar(
@@ -133,7 +131,6 @@ class _TrafficPageState extends ConsumerState<TrafficPage> {
                       text: '请在设置中启用 Clash API 以使用流量统计功能',
                       fontSize: 14,
                       neonColor: CyberpunkTheme.textSecondary,
-                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton(

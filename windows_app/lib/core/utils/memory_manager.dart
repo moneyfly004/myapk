@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io';
+
 import '../cache/memory_cache.dart';
 import 'logger.dart';
 
@@ -22,11 +22,9 @@ class MemoryManager {
     });
     
     // 每 10 分钟强制垃圾回收（仅调试模式）
-    if (io.Platform.isWindows) {
-      Timer.periodic(const Duration(minutes: 10), (_) {
-        _forceGarbageCollection();
-      });
-    }
+    Timer.periodic(const Duration(minutes: 10), (_) {
+      _forceGarbageCollection();
+    });
     
     _isInitialized = true;
     Logger.info('内存管理器已初始化');
@@ -39,9 +37,7 @@ class MemoryManager {
       AppCache().evictExpired();
       
       // 记录内存使用情况（仅调试模式）
-      if (io.Platform.isWindows) {
-        _logMemoryUsage();
-      }
+      _logMemoryUsage();
     } catch (e) {
       Logger.error('清理缓存失败', e);
     }

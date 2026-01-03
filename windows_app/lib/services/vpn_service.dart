@@ -101,7 +101,7 @@ class VpnServiceNotifier extends StateNotifier<VpnServiceState> {
         );
 
         if (!proxySet) {
-          Logger.w('设置系统代理失败，但代理服务已启动');
+          Logger.warning('设置系统代理失败，但代理服务已启动');
         }
 
         state = state.copyWith(
@@ -110,7 +110,7 @@ class VpnServiceNotifier extends StateNotifier<VpnServiceState> {
           errorMessage: null,
         );
 
-        Logger.d('VPN 连接成功，模式: ${isGlobalMode ? "全局" : "规则"}');
+        Logger.debug('VPN 连接成功，模式: ${isGlobalMode ? "全局" : "规则"}');
       } else {
         state = state.copyWith(
           status: VpnStatus.error,
@@ -118,7 +118,7 @@ class VpnServiceNotifier extends StateNotifier<VpnServiceState> {
         );
       }
     } catch (e) {
-      Logger.e('连接 VPN 异常: $e');
+      Logger.error('连接 VPN 异常: $e');
       state = state.copyWith(
         status: VpnStatus.error,
         errorMessage: e.toString(),
@@ -152,9 +152,9 @@ class VpnServiceNotifier extends StateNotifier<VpnServiceState> {
         errorMessage: null,
       );
 
-      Logger.d('VPN 已断开，系统代理已清除');
+      Logger.debug('VPN 已断开，系统代理已清除');
     } catch (e) {
-      Logger.e('断开 VPN 异常: $e');
+      Logger.error('断开 VPN 异常: $e');
       state = state.copyWith(
         status: VpnStatus.error,
         errorMessage: e.toString(),

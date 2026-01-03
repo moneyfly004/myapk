@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:package_info_plus/package_info_plus';
+// import 'package:package_info_plus/package_info_plus'; // Windows 上可能不可用
 import '../../../core/theme/cyberpunk_theme.dart';
 import '../../../widgets/cyberpunk/neon_card.dart';
 import '../../../widgets/cyberpunk/neon_text.dart';
@@ -27,10 +27,10 @@ class _AboutPageState extends ConsumerState<AboutPage> {
 
   Future<void> _loadVersionInfo() async {
     try {
-      final packageInfo = await PackageInfo.fromPlatform();
+      // 使用 VersionConfig 获取版本信息
       setState(() {
-        _version = packageInfo.version;
-        _buildNumber = packageInfo.buildNumber;
+        _version = VersionConfig.instance.versionName;
+        _buildNumber = VersionConfig.instance.versionCode.toString();
       });
     } catch (e) {
       // 使用默认值
@@ -152,7 +152,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                     ),
                     const SizedBox(height: 16),
                     FutureBuilder<String>(
-                      future: VersionConfig.instance.getVersion(),
+                      future: Future.value(VersionConfig.instance.versionNameForDisplay),
                       builder: (context, snapshot) {
                         if (snapshot.hasData) {
                           return ListTile(

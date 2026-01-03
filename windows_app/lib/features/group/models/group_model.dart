@@ -1,4 +1,4 @@
-import 'dart:convert';
+
 
 // 分组类型
 class GroupType {

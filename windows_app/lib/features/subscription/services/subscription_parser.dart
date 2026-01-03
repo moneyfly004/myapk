@@ -7,7 +7,7 @@ class SubscriptionParser {
   // 解析订阅 URL 并导入节点
   static Future<List<Node>> parseSubscription(String subscriptionUrl) async {
     try {
-      Logger.d('开始解析订阅: $subscriptionUrl');
+      Logger.debug('开始解析订阅: $subscriptionUrl');
 
       // 下载订阅内容
       final response = await http.get(
@@ -15,13 +15,13 @@ class SubscriptionParser {
       ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode != 200) {
-        Logger.e('订阅下载失败: ${response.statusCode}');
+        Logger.error('订阅下载失败: ${response.statusCode}');
         return [];
       }
 
       final content = response.body;
       if (content.isEmpty) {
-        Logger.e('订阅内容为空');
+        Logger.error('订阅内容为空');
         return [];
       }
 
@@ -37,10 +37,10 @@ class SubscriptionParser {
         nodes = _parseConfigContent(content);
       }
 
-      Logger.d('解析完成，共 ${nodes.length} 个节点');
+      Logger.debug('解析完成，共 ${nodes.length} 个节点');
       return nodes;
     } catch (e) {
-      Logger.e('解析订阅异常: $e');
+      Logger.error('解析订阅异常: $e');
       return [];
     }
   }
@@ -66,7 +66,7 @@ class SubscriptionParser {
       }
     } catch (e) {
       // 如果不是 JSON，尝试解析为其他格式
-      Logger.w('解析为 JSON 失败，尝试其他格式: $e');
+      Logger.warning('解析为 JSON 失败，尝试其他格式: $e');
       
       // TODO: 支持其他格式（V2Ray、Shadowsocks 等）
     }
@@ -95,7 +95,7 @@ class SubscriptionParser {
         config: proxy,
       );
     } catch (e) {
-      Logger.e('解析代理配置失败: $e');
+      Logger.error('解析代理配置失败: $e');
       return null;
     }
   }
@@ -106,15 +106,15 @@ class SubscriptionParser {
       final nodes = await parseSubscription(subscriptionUrl);
       
       if (nodes.isEmpty) {
-        Logger.w('订阅中没有找到节点');
+        Logger.warning('订阅中没有找到节点');
         return;
       }
 
       // TODO: 通过 provider 添加节点到列表
       // 这里需要访问 nodeListProvider
-      Logger.d('成功导入 ${nodes.length} 个节点');
+      Logger.debug('成功导入 ${nodes.length} 个节点');
     } catch (e) {
-      Logger.e('导入订阅失败: $e');
+      Logger.error('导入订阅失败: $e');
     }
   }
 }

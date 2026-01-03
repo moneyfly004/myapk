@@ -1,10 +1,9 @@
-import 'dart:io';
+
 import 'package:http/http.dart' as http;
 import '../../../core/utils/logger.dart';
 import '../providers/node_provider.dart';
 
 class UrlTestService {
-  static const String _defaultTestUrl = 'http://cp.cloudflare.com/';
   static const Duration _timeout = Duration(seconds: 5);
 
   // 测试节点延迟
@@ -30,10 +29,10 @@ class UrlTestService {
       // 模拟一些随机延迟变化
       final randomPing = ping + (DateTime.now().millisecond % 50 - 25);
       
-      Logger.d('节点 ${node.name} 测速完成: ${randomPing}ms');
+      Logger.debug('节点 ${node.name} 测速完成: ${randomPing}ms');
       return randomPing.clamp(10, 1000);
     } catch (e) {
-      Logger.e('节点测速失败: $e');
+      Logger.error('节点测速失败: $e');
       return null;
     }
   }
@@ -49,7 +48,7 @@ class UrlTestService {
       if (ping != null) {
         // 更新节点延迟
         // 这里需要通过 provider 更新节点状态
-        Logger.d('节点 ${node.name} 延迟: ${ping}ms');
+        Logger.debug('节点 ${node.name} 延迟: ${ping}ms');
       }
     });
 
@@ -78,14 +77,14 @@ class UrlTestService {
       final ping = endTime - startTime;
 
       if (response.statusCode == 200) {
-        Logger.d('节点 ${node.name} HTTP 测试成功: ${ping}ms');
+        Logger.debug('节点 ${node.name} HTTP 测试成功: ${ping}ms');
         return ping;
       } else {
-        Logger.w('节点 ${node.name} HTTP 测试失败: ${response.statusCode}');
+        Logger.warning('节点 ${node.name} HTTP 测试失败: ${response.statusCode}');
         return null;
       }
     } catch (e) {
-      Logger.e('节点 HTTP 测试异常: $e');
+      Logger.error('节点 HTTP 测试异常: $e');
       return null;
     }
   }

@@ -101,12 +101,14 @@ class NodeListState {
   final String? selectedNodeId;
   final bool isLoading;
   final String? error;
+  final bool autoSelectEnabled;
 
   const NodeListState({
     this.nodes = const [],
     this.selectedNodeId,
     this.isLoading = false,
     this.error,
+    this.autoSelectEnabled = false,
   });
 
   NodeListState copyWith({
@@ -114,12 +116,14 @@ class NodeListState {
     String? selectedNodeId,
     bool? isLoading,
     String? error,
+    bool? autoSelectEnabled,
   }) {
     return NodeListState(
       nodes: nodes ?? this.nodes,
       selectedNodeId: selectedNodeId ?? this.selectedNodeId,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
+      autoSelectEnabled: autoSelectEnabled ?? this.autoSelectEnabled,
     );
   }
 }
@@ -365,9 +369,7 @@ class NodeListNotifier extends StateNotifier<NodeListState> {
     try {
       final nodeMap = node.toMap();
       nodeMap['group_id'] = groupId;
-      final id = await _db.insertNode(nodeMap);
-      
-      // 清除缓存并重新加载
+            // 清除缓存并重新加载
       _cache.clear();
       await _loadNodes();
     } catch (e) {

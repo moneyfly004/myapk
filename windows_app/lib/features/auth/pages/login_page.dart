@@ -8,7 +8,6 @@ import '../../../widgets/cyberpunk/grid_background.dart';
 import '../../../widgets/cyberpunk/neon_text.dart';
 import 'register_page.dart';
 import 'forgot_password_page.dart';
-import '../repositories/auth_repository.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -82,18 +81,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const NeonText(
-                          'NekoBox',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
+                          text: 'NekoBox',
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
                         ),
                         const SizedBox(height: 8),
                         const NeonText(
-                          '登录您的账户',
-                          style: TextStyle(fontSize: 16),
-                          textAlign: TextAlign.center,
+                          text: '登录您的账户',
+                          fontSize: 16,
                         ),
                         const SizedBox(height: 32),
                         TextFormField(
@@ -220,7 +215,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                   ),
                                 );
                               },
-                              child: const NeonText('注册账户'),
+                              child: const NeonText(text: '注册账户'),
                             ),
                             TextButton(
                               onPressed: () {
@@ -230,7 +225,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                   ),
                                 );
                               },
-                              child: const NeonText('忘记密码'),
+                              child: const NeonText(text: '忘记密码'),
                             ),
                           ],
                         ),

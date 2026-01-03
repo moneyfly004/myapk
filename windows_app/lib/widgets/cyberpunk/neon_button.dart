@@ -2,22 +2,24 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 
 class NeonButton extends StatefulWidget {
-  final String text;
+  final String? text;
+  final Widget? child;
   final VoidCallback? onPressed;
   final Color neonColor;
-  final double width;
-  final double height;
+  final double? width;
+  final double? height;
   final bool isActive;
 
   const NeonButton({
     super.key,
-    required this.text,
+    this.text,
+    this.child,
     this.onPressed,
     this.neonColor = const Color(0xFF00FFFF),
-    this.width = 200,
+    this.width,
     this.height = 60,
     this.isActive = false,
-  });
+  }) : assert(text != null || child != null, 'Either text or child must be provided');
 
   @override
   State<NeonButton> createState() => _NeonButtonState();
@@ -55,7 +57,7 @@ class _NeonButtonState extends State<NeonButton>
         return GestureDetector(
           onTap: widget.onPressed,
           child: Container(
-            width: widget.width,
+            width: widget.width ?? double.infinity,
             height: widget.height,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
@@ -103,8 +105,8 @@ class _NeonButtonState extends State<NeonButton>
                     ),
                   ),
                   child: Center(
-                    child: Text(
-                      widget.text,
+                    child: widget.child ?? Text(
+                      widget.text ?? '',
                       style: TextStyle(
                         color: widget.neonColor,
                         fontSize: 20,

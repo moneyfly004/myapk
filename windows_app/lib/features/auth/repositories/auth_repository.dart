@@ -64,9 +64,9 @@ class AuthRepository {
         }),
       ).timeout(const Duration(seconds: 30));
 
-      Logger.d('登录请求: $_apiBase/auth/login');
-      Logger.d('登录响应码: ${response.statusCode}');
-      Logger.d('登录响应体: ${response.body}');
+      Logger.debug('登录请求: $_apiBase/auth/login');
+      Logger.debug('登录响应码: ${response.statusCode}');
+      Logger.debug('登录响应体: ${response.body}');
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
@@ -74,20 +74,20 @@ class AuthRepository {
           final loginResponse = LoginResponse.fromJson(json);
           await saveToken(loginResponse.token);
           await saveUserInfo(loginResponse.email, loginResponse.username);
-          Logger.d('登录成功: ${loginResponse.email}');
+          Logger.debug('登录成功: ${loginResponse.email}');
           return Result.success(loginResponse);
         } else {
           final message = json['message'] as String? ?? '登录失败';
-          Logger.e('登录失败: $message');
+          Logger.error('登录失败: $message');
           return Result.failure(Exception(message));
         }
       } else {
         final errorMessage = _parseErrorMessage(response.body);
-        Logger.e('登录请求失败: ${response.statusCode}, 错误: $errorMessage');
+        Logger.error('登录请求失败: ${response.statusCode}, 错误: $errorMessage');
         return Result.failure(Exception(errorMessage));
       }
     } catch (e) {
-      Logger.e('登录异常: $e');
+      Logger.error('登录异常: $e');
       final errorMsg = _getErrorMessage(e);
       return Result.failure(Exception(errorMsg));
     }
@@ -118,20 +118,20 @@ class AuthRepository {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
         if (json['success'] == true) {
           final message = json['message'] as String? ?? '注册成功';
-          Logger.d('注册成功: $email');
+          Logger.debug('注册成功: $email');
           return Result.success(message);
         } else {
           final message = json['message'] as String? ?? '注册失败';
-          Logger.e('注册失败: $message');
+          Logger.error('注册失败: $message');
           return Result.failure(Exception(message));
         }
       } else {
         final errorMessage = _parseErrorMessage(response.body);
-        Logger.e('注册请求失败: ${response.statusCode}, 错误: $errorMessage');
+        Logger.error('注册请求失败: ${response.statusCode}, 错误: $errorMessage');
         return Result.failure(Exception(errorMessage));
       }
     } catch (e) {
-      Logger.e('注册异常: $e');
+      Logger.error('注册异常: $e');
       final errorMsg = _getErrorMessage(e);
       return Result.failure(Exception(errorMsg));
     }
@@ -172,7 +172,7 @@ class AuthRepository {
         return Result.failure(Exception(errorMessage));
       }
     } catch (e) {
-      Logger.e('发送验证码异常: $e');
+      Logger.error('发送验证码异常: $e');
       final errorMsg = _getErrorMessage(e);
       return Result.failure(Exception(errorMsg));
     }
@@ -209,7 +209,7 @@ class AuthRepository {
         return Result.failure(Exception(errorMessage));
       }
     } catch (e) {
-      Logger.e('忘记密码异常: $e');
+      Logger.error('忘记密码异常: $e');
       final errorMsg = _getErrorMessage(e);
       return Result.failure(Exception(errorMsg));
     }
@@ -255,7 +255,7 @@ class AuthRepository {
         return Result.failure(Exception(errorMessage));
       }
     } catch (e) {
-      Logger.e('获取订阅信息异常: $e');
+      Logger.error('获取订阅信息异常: $e');
       final errorMsg = _getErrorMessage(e);
       return Result.failure(Exception(errorMsg));
     }
@@ -336,20 +336,20 @@ class AuthRepository {
         if (json['success'] == true || json['success'] == null) {
           final data = json['data'] as List<dynamic>? ?? [];
           final packages = data.map((e) => Package.fromJson(e as Map<String, dynamic>)).toList();
-          Logger.d('获取套餐列表成功: ${packages.length} 个套餐');
+          Logger.debug('获取套餐列表成功: ${packages.length} 个套餐');
           return Result.success(packages);
         } else {
           final message = json['message'] as String? ?? '获取套餐列表失败';
-          Logger.e('获取套餐列表失败: $message');
+          Logger.error('获取套餐列表失败: $message');
           return Result.failure(Exception(message));
         }
       } else {
         final errorMessage = _parseErrorMessage(response.body);
-        Logger.e('获取套餐列表失败: ${response.statusCode}, 错误: $errorMessage');
+        Logger.error('获取套餐列表失败: ${response.statusCode}, 错误: $errorMessage');
         return Result.failure(Exception(errorMessage));
       }
     } catch (e) {
-      Logger.e('获取套餐列表异常: $e');
+      Logger.error('获取套餐列表异常: $e');
       final errorMsg = _getErrorMessage(e);
       return Result.failure(Exception(errorMsg));
     }
@@ -391,20 +391,20 @@ class AuthRepository {
         if (json['success'] == true) {
           final data = json['data'] as Map<String, dynamic>;
           final order = Order.fromJson(data);
-          Logger.d('创建订单成功: ${order.orderNo}');
+          Logger.debug('创建订单成功: ${order.orderNo}');
           return Result.success(order);
         } else {
           final message = json['message'] as String? ?? '创建订单失败';
-          Logger.e('创建订单失败: $message');
+          Logger.error('创建订单失败: $message');
           return Result.failure(Exception(message));
         }
       } else {
         final errorMessage = _parseErrorMessage(response.body);
-        Logger.e('创建订单失败: ${response.statusCode}, 错误: $errorMessage');
+        Logger.error('创建订单失败: ${response.statusCode}, 错误: $errorMessage');
         return Result.failure(Exception(errorMessage));
       }
     } catch (e) {
-      Logger.e('创建订单异常: $e');
+      Logger.error('创建订单异常: $e');
       final errorMsg = _getErrorMessage(e);
       return Result.failure(Exception(errorMsg));
     }
@@ -441,7 +441,7 @@ class AuthRepository {
         return Result.failure(Exception(errorMessage));
       }
     } catch (e) {
-      Logger.e('获取订单状态异常: $e');
+      Logger.error('获取订单状态异常: $e');
       final errorMsg = _getErrorMessage(e);
       return Result.failure(Exception(errorMsg));
     }
