@@ -78,14 +78,27 @@ jobs:
           echo "ndk.dir=${ANDROID_HOME}/ndk/25.0.8775105" >> local.properties
           export LOCAL_PROPERTIES="${{ secrets.LOCAL_PROPERTIES }}"
           ./run init action gradle
+          # 构建 Release 版本
           ./gradlew app:assembleOssRelease
-          APK=$(find app/build/outputs/apk -name '*arm64-v8a*.apk')
-          APK=$(dirname $APK)
-          echo "APK=$APK" >> $GITHUB_ENV
+          # 构建 Debug 版本
+          ./gradlew app:assembleOssDebug
+          # 查找所有 APK 文件（Release 和 Debug）
+          APK_RELEASE=$(find app/build/outputs/apk/oss/release -name '*.apk' -type f | head -1)
+          APK_DEBUG=$(find app/build/outputs/apk/oss/debug -name '*.apk' -type f | head -1)
+          if [ -n "$APK_RELEASE" ]; then
+            APK_DIR=$(dirname $APK_RELEASE)
+            echo "APK_RELEASE_DIR=$APK_DIR" >> $GITHUB_ENV
+          fi
+          if [ -n "$APK_DEBUG" ]; then
+            APK_DIR=$(dirname $APK_DEBUG)
+            echo "APK_DEBUG_DIR=$APK_DIR" >> $GITHUB_ENV
+          fi
+          # 合并所有 APK 目录
+          echo "APK=app/build/outputs/apk/oss" >> $GITHUB_ENV
       - uses: actions/upload-artifact@v4
         with:
           name: APKs
-          path: ${{ env.APK }}
+          path: app/build/outputs/apk/oss
   publish:
     name: Publish Release
     # 手动触发时，如果 publish 输入为 'y' 则跳过；push tag 时总是发布
@@ -131,12 +144,14 @@ jobs:
             ## Release ${{ steps.tag.outputs.tag }}
             
             ### APK 文件
-            - 自动构建的 Release 版本 APK
-            - 包含所有架构版本
+            - **Release 版本**: 优化后的生产版本，适合正式使用
+            - **Debug 版本**: 调试版本，包含调试信息，适合测试
+            - 包含所有架构版本（arm64-v8a, armeabi-v7a, x86, x86_64）
             
             ### 安装说明
             1. 下载对应架构的 APK 文件
             2. 在 Android 设备上安装
+            3. Release 版本用于正式使用，Debug 版本用于测试
           files: artifacts/**/*.apk
           draft: false
           prerelease: false
