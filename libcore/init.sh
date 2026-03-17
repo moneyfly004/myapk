@@ -7,8 +7,8 @@ if [ -z "$GOPATH" ]; then
     GOPATH=$(go env GOPATH)
 fi
 
-# Install gomobile
-if [ ! -f "$GOPATH/bin/gomobile-matsuri" ]; then
+# Install gomobile from MatsuriDayo fork
+if [ ! -f "$GOPATH/bin/gomobile" ]; then
     git clone https://github.com/MatsuriDayo/gomobile.git
     pushd gomobile
 	git checkout origin/master2
@@ -21,8 +21,6 @@ if [ ! -f "$GOPATH/bin/gomobile-matsuri" ]; then
     popd
     popd
     rm -rf gomobile
-    mv "$GOPATH/bin/gomobile" "$GOPATH/bin/gomobile-matsuri"
-    mv "$GOPATH/bin/gobind" "$GOPATH/bin/gobind-matsuri"
 fi
 
-GOBIND=gobind-matsuri gomobile-matsuri init
+gomobile init
