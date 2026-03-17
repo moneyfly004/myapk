@@ -17,7 +17,8 @@ if [ ! -f "$GOPATH/bin/gomobile-matsuri" ]; then
     pushd "$MOBILE_PATH"
     git checkout origin/master2
 
-    # Install gomobile and gobind commands
+    # Install gomobile and gobind commands with GO111MODULE=off to use GOPATH mode
+    export GO111MODULE=off
     pushd cmd/gomobile
     go install -v
     popd
@@ -31,4 +32,6 @@ if [ ! -f "$GOPATH/bin/gomobile-matsuri" ]; then
     mv "$GOPATH/bin/gobind" "$GOPATH/bin/gobind-matsuri"
 fi
 
+# Run gomobile init with GO111MODULE=off to ensure GOPATH mode
+export GO111MODULE=off
 GOBIND=gobind-matsuri gomobile-matsuri init
