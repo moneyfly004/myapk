@@ -43,13 +43,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
-      - name: Setup Go Mobile
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          go install golang.org/x/mobile/cmd/gomobile@latest
-          go install golang.org/x/mobile/cmd/gobind@latest
-          gomobile init
+          go-version: ^1.25
       - name: Native Build
         if: steps.cache.outputs.cache-hit != 'true'
         run: ./run lib core
