@@ -7,18 +7,16 @@ if [ -z "$GOPATH" ]; then
     GOPATH=$(go env GOPATH)
 fi
 
-# Install gomobile
+# Install gomobile-matsuri
 if [ ! -f "$GOPATH/bin/gomobile-matsuri" ]; then
     git clone https://github.com/MatsuriDayo/gomobile.git
     pushd gomobile
-	git checkout origin/master2
-    pushd cmd
-    pushd gomobile
+    git checkout origin/master2
+    pushd cmd/gomobile
     go install -v
     popd
-    pushd gobind
+    pushd cmd/gobind
     go install -v
-    popd
     popd
     popd
     rm -rf gomobile
@@ -26,5 +24,5 @@ if [ ! -f "$GOPATH/bin/gomobile-matsuri" ]; then
     mv "$GOPATH/bin/gobind" "$GOPATH/bin/gobind-matsuri"
 fi
 
-# Initialize gomobile-matsuri (use standard gomobile's packages)
-GOBIND=gobind-matsuri gomobile-matsuri init || true
+# Note: gomobile-matsuri init is not needed for bind command
+# The bind command will work directly with the installed tools
