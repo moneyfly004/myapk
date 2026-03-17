@@ -9,19 +9,14 @@ fi
 
 # Install gomobile-matsuri
 if [ ! -f "$GOPATH/bin/gomobile-matsuri" ]; then
-    # Clone MatsuriDayo's gomobile to GOPATH so the bind package can be imported
-    MOBILE_PATH="$GOPATH/src/golang.org/x/mobile"
-    mkdir -p "$(dirname "$MOBILE_PATH")"
+    # Clone MatsuriDayo's gomobile to a local directory
+    MOBILE_PATH="../gomobile-matsuri"
 
     git clone https://github.com/MatsuriDayo/gomobile.git "$MOBILE_PATH"
     pushd "$MOBILE_PATH"
     git checkout origin/master2
 
-    # First, download all dependencies using module mode
-    go mod download
-
-    # Install gomobile and gobind commands with GO111MODULE=off to use GOPATH mode
-    export GO111MODULE=off
+    # Install gomobile and gobind commands
     pushd cmd/gomobile
     go install -v
     popd
@@ -33,8 +28,12 @@ if [ ! -f "$GOPATH/bin/gomobile-matsuri" ]; then
     # Rename to gomobile-matsuri and gobind-matsuri
     mv "$GOPATH/bin/gomobile" "$GOPATH/bin/gomobile-matsuri"
     mv "$GOPATH/bin/gobind" "$GOPATH/bin/gobind-matsuri"
+
+    # Add replace directive to go.mod to use local gomobile-matsuri
+    if ! grep -q "replace golang.org/x/mobile" go.mod; then
+        echo "" >> go.mod
+        echo "replace golang.org/x/mobile => $MOBILE_PATH" >> go.mod
+    fi
 fi
 
-# Run gomobile init with GO111MODULE=off to ensure GOPATH mode
-export GO111MODULE=off
 GOBIND=gobind-matsuri gomobile-matsuri init
