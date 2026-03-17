@@ -50,6 +50,8 @@ class PackagePurchaseFragment : ToolbarFragment(R.layout.layout_package_purchase
     private var currentOrder: Order? = null
     private var paymentStatusCheckJob: Job? = null
     private val handler = Handler(Looper.getMainLooper())
+    private val paidOrdersCache = mutableSetOf<String>() // 缓存已支付的订单号
+    private var consecutiveFailures = 0 // 连续失败次数
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -171,21 +173,25 @@ class PackagePurchaseFragment : ToolbarFragment(R.layout.layout_package_purchase
             qrImageView.visibility = View.GONE
         }
 
-        // 跳转支付宝App（这是跳转到另一个App，不是浏览器）
+        // 检查支付宝是否安装
+        val isAlipayInstalled = isAlipayInstalled()
+        if (!isAlipayInstalled) {
+            openAlipayBtn.isEnabled = false
+            openAlipayBtn.text = "未安装支付宝"
+        }
+
+        // 跳转支付宝App
         openAlipayBtn.setOnClickListener {
             try {
-                // 支付宝App跳转URL格式：alipays://platformapi/startapp?saId=10000007&qrcode=支付URL
                 val alipayUrl = "alipays://platformapi/startapp?saId=10000007&qrcode=${Uri.encode(paymentUrl)}"
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(alipayUrl))
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 try {
                     startActivity(intent)
-                    // 如果成功跳转，3秒后提示用户返回检查状态
                     handler.postDelayed({
                         Toast.makeText(requireContext(), "如果已完成支付，请返回检查支付状态", Toast.LENGTH_SHORT).show()
                     }, 3000)
                 } catch (e: android.content.ActivityNotFoundException) {
-                    // 如果没有安装支付宝，提示用户在App内打开
                     Toast.makeText(requireContext(), "未检测到支付宝App，请点击\"在App内打开支付页面\"或扫描二维码", Toast.LENGTH_LONG).show()
                 }
             } catch (e: Exception) {
@@ -194,7 +200,7 @@ class PackagePurchaseFragment : ToolbarFragment(R.layout.layout_package_purchase
             }
         }
 
-        // 在App内打开支付页面（使用WebView，不跳转浏览器）
+        // 在App内打开支付页面
         openWebViewBtn.setOnClickListener {
             showPaymentWebView(paymentUrl, order.orderNo)
         }
@@ -203,7 +209,6 @@ class PackagePurchaseFragment : ToolbarFragment(R.layout.layout_package_purchase
         checkStatusBtn.setOnClickListener {
             checkPaymentStatus(order.orderNo)
         }
-
 
         // 开始轮询支付状态
         var dialogRef: androidx.appcompat.app.AlertDialog? = null
@@ -217,14 +222,13 @@ class PackagePurchaseFragment : ToolbarFragment(R.layout.layout_package_purchase
             }
             .show()
         dialogRef = dialog
-        
+
         startPaymentStatusCheck(order.orderNo) { isPaid ->
             if (isPaid) {
                 dialogRef?.dismiss()
                 paymentStatusCheckJob?.cancel()
-                Toast.makeText(requireContext(), "支付成功！订阅已更新", Toast.LENGTH_LONG).show()
+                showPaymentSuccessAnimation()
                 updateSubscription()
-                // 刷新套餐列表
                 loadPackages()
             }
         }
@@ -259,35 +263,83 @@ class PackagePurchaseFragment : ToolbarFragment(R.layout.layout_package_purchase
     }
 
     private fun startPaymentStatusCheck(orderNo: String, onPaid: (Boolean) -> Unit) {
+        // 检查是否已经支付过
+        if (paidOrdersCache.contains(orderNo)) {
+            onPaid(true)
+            return
+        }
+
         paymentStatusCheckJob?.cancel()
+        consecutiveFailures = 0
+
         paymentStatusCheckJob = lifecycleScope.launch {
             var checkCount = 0
-            val maxChecks = 300 // 最多检查10分钟（300次 * 2秒）
-            
+            val maxChecks = 180 // 最多检查15分钟
+
             while (isActive && checkCount < maxChecks) {
-                delay(2000) // 每2秒检查一次
+                // 指数退避策略：前15次(30秒)每2秒，16-45次(2.5分钟)每5秒，之后每10秒
+                val delayTime = when {
+                    checkCount < 15 -> 2000L
+                    checkCount < 45 -> 5000L
+                    else -> 10000L
+                }
+                delay(delayTime)
                 checkCount++
-                
+
                 try {
                     val result = authRepository.getOrderStatus(orderNo)
                     result.onSuccess { status ->
+                        consecutiveFailures = 0 // 重置失败计数
+
                         if (status.status == "paid") {
-                            onPaid(true)
+                            paidOrdersCache.add(orderNo) // 缓存已支付订单
+                            withContext(Dispatchers.Main) {
+                                onPaid(true)
+                            }
+                            cancel()
+                        } else if (status.status == "cancelled") {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(requireContext(), "订单已取消", Toast.LENGTH_SHORT).show()
+                            }
                             cancel()
                         }
                     }.onFailure { error ->
-                        // 查询失败时继续轮询，不中断
-                        if (checkCount % 10 == 0) { // 每20秒记录一次错误
+                        consecutiveFailures++
+
+                        // 连续失败5次提示用户
+                        if (consecutiveFailures >= 5) {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(requireContext(), "网络连接不稳定，请检查网络后手动查询", Toast.LENGTH_LONG).show()
+                            }
+                            consecutiveFailures = 0 // 重置计数避免重复提示
+                        }
+
+                        // Token 过期自动刷新
+                        if (error.message?.contains("401") == true || error.message?.contains("登录") == true) {
+                            val refreshResult = authRepository.refreshToken()
+                            if (refreshResult.isFailure) {
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(requireContext(), "登录已过期，请重新登录", Toast.LENGTH_LONG).show()
+                                }
+                                cancel()
+                            }
+                        }
+
+                        if (checkCount % 10 == 0) {
                             Logs.w("支付状态查询失败: ${error.message}")
                         }
                     }
                 } catch (e: Exception) {
                     Logs.e(e)
+                    consecutiveFailures++
                 }
             }
-            
-            // 如果达到最大检查次数，停止轮询
+
+            // 超时提醒
             if (checkCount >= maxChecks) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(requireContext(), "支付状态检查超时，请手动点击\"查询支付状态\"按钮", Toast.LENGTH_LONG).show()
+                }
                 Logs.w("支付状态检查超时，已停止轮询")
             }
         }
@@ -296,11 +348,16 @@ class PackagePurchaseFragment : ToolbarFragment(R.layout.layout_package_purchase
     private fun checkPaymentStatus(orderNo: String) {
         lifecycleScope.launch {
             try {
+                // 显示加载提示
+                val loadingToast = Toast.makeText(requireContext(), "正在查询支付状态...", Toast.LENGTH_SHORT)
+                loadingToast.show()
+
                 val result = authRepository.getOrderStatus(orderNo)
                 result.onSuccess { status ->
                     when (status.status) {
                         "paid" -> {
-                            Toast.makeText(requireContext(), "支付成功！订阅已更新", Toast.LENGTH_LONG).show()
+                            paidOrdersCache.add(orderNo) // 缓存已支付订单
+                            showPaymentSuccessAnimation()
                             paymentStatusCheckJob?.cancel()
                             updateSubscription()
                             loadPackages()
@@ -361,8 +418,8 @@ class PackagePurchaseFragment : ToolbarFragment(R.layout.layout_package_purchase
             @SuppressLint("QueryPermissionsNeeded")
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val url = request?.url?.toString() ?: return false
-                
-                // 如果是支付宝App链接，尝试跳转（这是跳转到另一个App，不是浏览器）
+
+                // 如果是支付宝App链接，尝试跳转
                 if (url.startsWith("alipays://")) {
                     try {
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
@@ -374,28 +431,33 @@ class PackagePurchaseFragment : ToolbarFragment(R.layout.layout_package_purchase
                     } catch (e: Exception) {
                         Logs.e(e)
                     }
-                    // 如果无法跳转，继续在WebView中加载
                     return false
                 }
-                
-                // 如果是http/https链接，在WebView中打开，不跳转浏览器
+
+                // 如果是http/https链接，在WebView中打开
                 if (url.startsWith("http://") || url.startsWith("https://")) {
                     view?.loadUrl(url)
                     return true
                 }
-                
-                // 其他链接都在WebView中打开，不跳转浏览器
+
                 return false
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                // 页面加载完成后，可以自动检查支付状态
+                // 检查URL是否包含支付成功的标识
+                if (url?.contains("success") == true || url?.contains("paid") == true) {
+                    handler.postDelayed({
+                        checkPaymentStatus(orderNo)
+                    }, 1000)
+                }
             }
 
             override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: android.webkit.WebResourceError?) {
                 super.onReceivedError(view, request, error)
-                Toast.makeText(requireContext(), "页面加载失败，请检查网络连接", Toast.LENGTH_SHORT).show()
+                if (request?.isForMainFrame == true) {
+                    Toast.makeText(requireContext(), "页面加载失败，请检查网络连接", Toast.LENGTH_SHORT).show()
+                }
             }
         }
 
@@ -415,11 +477,14 @@ class PackagePurchaseFragment : ToolbarFragment(R.layout.layout_package_purchase
             .setCancelable(false)
             .setOnDismissListener {
                 try {
-                    webView.onPause()
                     webView.stopLoading()
+                    webView.loadUrl("about:blank")
                     webView.clearHistory()
                     webView.clearCache(true)
+                    webView.clearFormData()
+                    webView.onPause()
                     webView.removeAllViews()
+                    (webView.parent as? ViewGroup)?.removeView(webView)
                     webView.destroy()
                 } catch (e: Exception) {
                     Logs.e(e)
@@ -439,11 +504,35 @@ class PackagePurchaseFragment : ToolbarFragment(R.layout.layout_package_purchase
             if (isPaid) {
                 webViewDialogRef?.dismiss()
                 paymentStatusCheckJob?.cancel()
-                Toast.makeText(requireContext(), "支付成功！订阅已更新", Toast.LENGTH_LONG).show()
+                showPaymentSuccessAnimation()
                 updateSubscription()
                 loadPackages()
             }
         }
+    }
+
+    private fun isAlipayInstalled(): Boolean {
+        return try {
+            val packageManager = requireContext().packageManager
+            packageManager.getPackageInfo("com.eg.android.AlipayGphone", 0)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun showPaymentSuccessAnimation() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("✅ 支付成功")
+            .setMessage("您的订阅已成功激活！\n\n感谢您的支持，祝您使用愉快！")
+            .setPositiveButton("查看订阅") { _, _ ->
+                // 跳转到订阅详情页
+                (requireActivity() as? MainActivity)?.let { mainActivity ->
+                    mainActivity.updateSubscriptionOnResume()
+                }
+            }
+            .setCancelable(false)
+            .show()
     }
 
     private fun updateSubscription() {
@@ -477,6 +566,7 @@ class PackagePurchaseFragment : ToolbarFragment(R.layout.layout_package_purchase
     override fun onDestroyView() {
         super.onDestroyView()
         paymentStatusCheckJob?.cancel()
+        handler.removeCallbacksAndMessages(null) // 清理所有 Handler 回调
     }
 
     inner class PackagesAdapter : RecyclerView.Adapter<PackageViewHolder>() {

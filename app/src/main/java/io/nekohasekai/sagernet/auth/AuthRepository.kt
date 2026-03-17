@@ -615,7 +615,7 @@ class AuthRepository(private val context: Context) {
     }
     
     /**
-     * 查询订单状态
+     * 查询订单状态（带自动重试和 Token 刷新）
      */
     suspend fun getOrderStatus(orderNo: String): Result<OrderStatus> = withContext(Dispatchers.IO) {
         try {
@@ -623,19 +623,51 @@ class AuthRepository(private val context: Context) {
             if (token == null) {
                 return@withContext Result.failure(Exception("未登录"))
             }
-            
+
             val request = Request.Builder()
                 .url("$API_BASE/orders/$orderNo/status")
                 .header("Authorization", "Bearer $token")
                 .get()
                 .build()
-            
+
             val response = client.newCall(request).execute()
             val body = response.body?.string()
-            
+
+            // 如果是 401 错误，尝试刷新 Token 后重试
+            if (response.code == 401) {
+                Log.w(TAG, "Token 可能过期，尝试刷新")
+                val refreshResult = refreshToken()
+                if (refreshResult.isSuccess) {
+                    // Token 刷新成功，重试请求
+                    val newToken = getToken()
+                    val retryRequest = Request.Builder()
+                        .url("$API_BASE/orders/$orderNo/status")
+                        .header("Authorization", "Bearer $newToken")
+                        .get()
+                        .build()
+
+                    val retryResponse = client.newCall(retryRequest).execute()
+                    val retryBody = retryResponse.body?.string()
+
+                    if (retryResponse.isSuccessful && retryBody != null) {
+                        val apiResponse = gson.fromJson(retryBody, JsonObject::class.java)
+                        if (apiResponse.get("success")?.asBoolean == true) {
+                            val data = apiResponse.getAsJsonObject("data")
+                            val status = OrderStatus(
+                                orderNo = data.get("order_no")?.asString ?: orderNo,
+                                status = data.get("status")?.asString ?: "pending",
+                                amount = data.get("amount")?.asDouble ?: 0.0
+                            )
+                            return@withContext Result.success(status)
+                        }
+                    }
+                }
+                return@withContext Result.failure(Exception("登录已过期，请重新登录"))
+            }
+
             if (response.isSuccessful && body != null) {
                 val apiResponse = gson.fromJson(body, JsonObject::class.java)
-                
+
                 if (apiResponse.get("success")?.asBoolean == true) {
                     val data = apiResponse.getAsJsonObject("data")
                     val status = OrderStatus(
@@ -643,14 +675,14 @@ class AuthRepository(private val context: Context) {
                         status = data.get("status")?.asString ?: "pending",
                         amount = data.get("amount")?.asDouble ?: 0.0
                     )
-                    
+
                     Result.success(status)
                 } else {
                     val message = apiResponse.get("message")?.asString ?: "查询订单状态失败"
                     Result.failure(Exception(message))
                 }
             } else {
-                Result.failure(Exception("查询订单状态失败"))
+                Result.failure(Exception("查询订单状态失败: HTTP ${response.code}"))
             }
         } catch (e: Exception) {
             Log.e(TAG, "查询订单状态异常", e)
