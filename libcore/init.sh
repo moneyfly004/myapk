@@ -17,6 +17,9 @@ if [ ! -f "$GOPATH/bin/gomobile-matsuri" ]; then
     pushd "$MOBILE_PATH"
     git checkout origin/master2
 
+    # First, download all dependencies using module mode
+    go mod download
+
     # Install gomobile and gobind commands with GO111MODULE=off to use GOPATH mode
     export GO111MODULE=off
     pushd cmd/gomobile
