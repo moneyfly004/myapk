@@ -20,9 +20,11 @@ if [ ! -f "$GOPATH/bin/gomobile-matsuri" ]; then
     go install -v
     popd
     popd
+    popd
     rm -rf gomobile
     mv "$GOPATH/bin/gomobile" "$GOPATH/bin/gomobile-matsuri"
     mv "$GOPATH/bin/gobind" "$GOPATH/bin/gobind-matsuri"
 fi
 
-GOBIND=gobind-matsuri gomobile-matsuri init
+# Initialize gomobile-matsuri (use standard gomobile's packages)
+GOBIND=gobind-matsuri gomobile-matsuri init || true
