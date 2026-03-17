@@ -85,3 +85,5 @@ require (
 replace github.com/matsuridayo/libneko => ../../libneko
 
 replace github.com/sagernet/sing-box => ../../sing-box
+
+replace golang.org/x/mobile => github.com/MatsuriDayo/gomobile v0.0.0-20250101000000-17d6af3e5e5e
